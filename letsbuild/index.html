@@ -1,0 +1,2796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logan Spears — Work With Me</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #0a0a0a;
+      --terminal-bg: #1a1a1a;
+      --terminal-header: #2a2a2a;
+      --text-white: #e5e5e5;
+      --text-muted: #666666;
+      --text-yellow: #e6b84a;
+      --text-green: #4ade80;
+      --text-blue: #60a5fa;
+      --input-bg: #252525;
+      --border-color: #333333;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: #0d0d0d;
+      color: var(--text-white);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ==================== macOS MENU BAR ==================== */
+    .macos-menubar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 28px;
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 12px;
+      z-index: 9999;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .menubar-left, .menubar-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .menu-item {
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: default;
+      color: var(--text-white);
+      transition: background 0.1s;
+    }
+
+    .menu-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .menu-item.apple-logo {
+      padding: 4px 8px;
+    }
+
+    .menu-item.apple-logo svg {
+      display: block;
+    }
+
+    .menu-item.app-name {
+      font-weight: 600;
+    }
+
+    .menubar-right {
+      gap: 6px;
+    }
+
+    .menu-icon {
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: default;
+      color: var(--text-white);
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-icon:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .menu-icon svg {
+      display: block;
+    }
+
+    .menu-time {
+      padding: 4px 8px;
+      color: var(--text-white);
+      font-weight: 500;
+    }
+
+    /* WiFi Dropdown */
+    .wifi-dropdown-container {
+      position: relative;
+    }
+
+    .wifi-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 280px;
+      background: rgba(40, 40, 40, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      padding: 8px 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-5px);
+      transition: all 0.15s ease;
+      z-index: 10000;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .wifi-dropdown.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .wifi-dropdown-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 4px;
+    }
+
+    .wifi-dropdown-header span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-white);
+    }
+
+    .wifi-toggle {
+      width: 36px;
+      height: 20px;
+      background: #34C759;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .wifi-toggle::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      right: 2px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .wifi-dropdown-section {
+      padding: 4px 0;
+    }
+
+    .wifi-dropdown-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      padding: 4px 14px 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .wifi-network {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .wifi-network:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .wifi-network.connected {
+      background: rgba(52, 199, 89, 0.15);
+    }
+
+    .wifi-network-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--text-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wifi-network-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .wifi-network-info {
+      flex: 1;
+    }
+
+    .wifi-network-name {
+      font-size: 13px;
+      color: var(--text-white);
+    }
+
+    .wifi-network-status {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .wifi-network-check {
+      width: 16px;
+      height: 16px;
+      color: #34C759;
+    }
+
+    .wifi-dropdown-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 4px 0;
+    }
+
+    .wifi-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background 0.1s;
+      font-size: 13px;
+      color: var(--text-white);
+    }
+
+    .wifi-dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .wifi-dropdown-item svg {
+      width: 16px;
+      height: 16px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Secrets Folder Modal */
+    .secrets-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9500;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .secrets-modal-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .secrets-modal {
+      background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+      border-radius: 12px;
+      width: 320px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .secrets-modal-overlay.visible .secrets-modal {
+      transform: scale(1);
+    }
+
+    .secrets-modal-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 24px 16px;
+      text-align: center;
+    }
+
+    .secrets-modal-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #5ac8fa, #34aadc);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .secrets-modal-icon svg {
+      width: 36px;
+      height: 36px;
+      fill: white;
+    }
+
+    .secrets-modal-icon::after {
+      content: '🔒';
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      font-size: 20px;
+    }
+
+    .secrets-modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 8px;
+    }
+
+    .secrets-modal-subtitle {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.4;
+    }
+
+    .secrets-modal-body {
+      padding: 0 24px 16px;
+    }
+
+    .secrets-input-group {
+      position: relative;
+    }
+
+    .secrets-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: white;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .secrets-input:focus {
+      border-color: #5ac8fa;
+    }
+
+    .secrets-input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .secrets-error {
+      font-size: 12px;
+      color: #ff6b6b;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    .secrets-modal-footer {
+      display: flex;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .secrets-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      color: #5ac8fa;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.1s;
+    }
+
+    .secrets-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .secrets-btn:first-child {
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .secrets-btn.primary {
+      font-weight: 600;
+    }
+
+    /* Secrets Revealed Modal */
+    .secrets-revealed {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .secrets-revealed.visible {
+      display: flex;
+    }
+
+    .secrets-revealed-emoji {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .secrets-revealed-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .secrets-revealed-message {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .secrets-revealed-btn {
+      background: rgba(90, 200, 250, 0.2);
+      border: 1px solid rgba(90, 200, 250, 0.3);
+      color: #5ac8fa;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .secrets-revealed-btn:hover {
+      background: rgba(90, 200, 250, 0.3);
+    }
+
+    .secrets-password-form.hidden {
+      display: none;
+    }
+
+    /* ==================== DESKTOP BACKGROUND ==================== */
+    .desktop-bg {
+      position: fixed;
+      inset: 0;
+      top: 28px;
+      bottom: 0;
+      background: #0d0d0d;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    /* Video background */
+    .bg-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    /* Noise overlay */
+    .desktop-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ==================== DESKTOP ICONS ==================== */
+    .desktop-icons {
+      position: fixed;
+      top: 48px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .desktop-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: 80px;
+    }
+
+    .desktop-icon:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .desktop-icon .icon-img {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+    }
+
+    .desktop-icon .readme-icon {
+      background: linear-gradient(135deg, #4a90d9, #357abd);
+    }
+
+    .desktop-icon .folder-icon {
+      background: linear-gradient(135deg, #5ac8fa, #34aadc);
+    }
+
+    .desktop-icon .icon-img svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+
+    .desktop-icon span {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 11px;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      text-align: center;
+    }
+
+    /* ==================== macOS DOCK ==================== */
+    .macos-dock {
+      position: fixed;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+    }
+
+    .dock-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      background: rgba(40, 40, 40, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 6px 8px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .dock-item {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      text-decoration: none;
+    }
+
+    .dock-item:hover {
+      transform: translateY(-10px) scale(1.3);
+      margin: 0 8px;
+    }
+
+    .dock-item:hover::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 30, 30, 0.9);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .dock-item img {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+
+    .dock-icon-placeholder {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: white;
+    }
+
+    .dock-icon-placeholder.finder-icon {
+      background: linear-gradient(135deg, #6ac4f7, #4AA0D9);
+      padding: 0;
+    }
+
+    .dock-icon-placeholder.finder-icon svg {
+      width: 44px;
+      height: 44px;
+    }
+
+    .dock-icon-placeholder.x-icon {
+      background: linear-gradient(135deg, #1a1a1a, #000);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .dock-icon-placeholder.x-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: white;
+    }
+
+    .dock-icon-placeholder.messages-icon {
+      background: linear-gradient(135deg, #5DD466, #34C759);
+    }
+
+    .dock-icon-placeholder.messages-icon svg {
+      width: 26px;
+      height: 26px;
+      fill: white;
+    }
+
+    .dock-icon-placeholder.spotify-icon {
+      background: linear-gradient(135deg, #1ed760, #1DB954);
+    }
+
+    .dock-icon-placeholder.spotify-icon svg {
+      width: 28px;
+      height: 28px;
+      fill: white;
+    }
+
+    .dock-icon-placeholder.mail-icon {
+      background: linear-gradient(135deg, #5AC8FA, #007AFF);
+    }
+
+    .dock-icon-placeholder.mail-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+
+    .dock-icon-placeholder.figma-icon {
+      background: #2c2c2c;
+      padding: 6px;
+    }
+
+    .dock-icon-placeholder.figma-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .dock-icon-placeholder.downloads-icon {
+      background: linear-gradient(135deg, #5856d6, #4240a0);
+    }
+
+    .dock-icon-placeholder.downloads-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+
+    .dock-icon-placeholder.trash-icon {
+      background: linear-gradient(135deg, #636366, #48484a);
+    }
+
+    .dock-icon-placeholder.trash-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+
+    .dock-separator {
+      width: 1px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 0 4px;
+    }
+
+    /* Dock magnification effect for neighbors */
+    .dock-item:hover + .dock-item {
+      transform: translateY(-5px) scale(1.15);
+    }
+
+    .dock-item:has(+ .dock-item:hover) {
+      transform: translateY(-5px) scale(1.15);
+    }
+
+    /* Terminal window */
+    .terminal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      width: 90%;
+      max-width: 800px;
+      max-height: calc(100vh - 150px);
+      background: var(--terminal-bg);
+      border-radius: 12px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Terminal header */
+    .terminal-header {
+      background: var(--terminal-header);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .traffic-lights {
+      position: absolute;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .traffic-light {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .traffic-light:hover {
+      transform: scale(1.1);
+    }
+
+    .traffic-light.red { background: #ff5f57; }
+    .traffic-light.yellow { background: #febc2e; }
+    .traffic-light.green { background: #28c840; }
+
+    /* Hover icons */
+    .traffic-light::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .traffic-lights:hover .traffic-light::after {
+      opacity: 1;
+    }
+
+    .traffic-light.red::after {
+      content: '×';
+      color: #4a0000;
+      font-size: 10px;
+      line-height: 12px;
+    }
+
+    .traffic-light.yellow::after {
+      content: '−';
+      color: #5a4a00;
+      font-size: 10px;
+      line-height: 11px;
+    }
+
+    .traffic-light.green::after {
+      content: '';
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3L5 0L8 3M8 7L5 10L2 7' fill='none' stroke='%23006400' stroke-width='1.5'/%3E%3C/svg%3E");
+      background-size: 8px 8px;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* Terminal states */
+    .terminal.closing {
+      animation: closeWindow 0.3s ease forwards;
+    }
+
+    @keyframes closeWindow {
+      to {
+        transform: translate(-50%, -50%) scale(0.95);
+        opacity: 0;
+      }
+    }
+
+    .terminal.minimizing {
+      animation: minimizeWindow 0.4s ease forwards;
+    }
+
+    @keyframes minimizeWindow {
+      to {
+        transform: translate(-50%, 100vh) scale(0.1);
+        opacity: 0;
+      }
+    }
+
+    .terminal.fullscreen {
+      top: 28px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transform: none;
+      max-width: none;
+      max-height: none;
+      width: 100vw;
+      height: calc(100vh - 28px);
+      border-radius: 0;
+      z-index: 9998;
+    }
+
+    /* Spotlight Search Overlay */
+    .spotlight-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 20vh;
+      z-index: 9000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .spotlight-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spotlight-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: scale(0.95) translateY(-10px);
+      transition: transform 0.2s ease;
+    }
+
+    .spotlight-overlay.visible .spotlight-container {
+      transform: scale(1) translateY(0);
+    }
+
+    .spotlight-search {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(180, 180, 180, 0.95);
+      padding: 14px 20px;
+      border-radius: 12px;
+      min-width: 500px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .spotlight-icon {
+      width: 22px;
+      height: 22px;
+      color: #666;
+      flex-shrink: 0;
+    }
+
+    .spotlight-text {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 22px;
+      color: #1a1a1a;
+      flex: 1;
+      min-height: 28px;
+    }
+
+    .spotlight-cursor {
+      width: 2px;
+      height: 26px;
+      background: #1a1a1a;
+      animation: spotlightBlink 1s step-end infinite;
+    }
+
+    @keyframes spotlightBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .spotlight-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .spotlight-btn {
+      width: 48px;
+      height: 48px;
+      background: rgba(180, 180, 180, 0.95);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .spotlight-btn svg {
+      width: 22px;
+      height: 22px;
+      color: #444;
+    }
+
+    .terminal-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .terminal-title::before {
+      content: '>_';
+      color: var(--text-muted);
+    }
+
+    /* Terminal body */
+    .terminal-body {
+      padding: 32px 40px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* ASCII Logo */
+    .ascii-logo {
+      font-size: 11px;
+      line-height: 1.15;
+      letter-spacing: 0px;
+      margin: 0 auto 16px auto;
+      white-space: pre;
+      color: var(--text-white);
+      display: block;
+      width: fit-content;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .version {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .tagline {
+      text-align: center;
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .warning {
+      text-align: center;
+      color: var(--text-yellow);
+      font-size: 14px;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* Section divider */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin: 32px 0 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    .section-divider::before,
+    .section-divider::after {
+      content: '——';
+    }
+
+    /* Form elements */
+    .form-content {
+      display: none;
+    }
+
+    .form-content.active {
+      display: block;
+    }
+
+    .question-group {
+      margin-bottom: 24px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeInUp 0.4s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .question {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .question-hint {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .question-hint em {
+      font-style: italic;
+      color: var(--text-white);
+    }
+
+    .answer {
+      color: var(--text-white);
+      font-size: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .answer::before {
+      content: '›';
+      color: var(--text-muted);
+    }
+
+    .success-message {
+      color: var(--text-green);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .sending-message {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+
+    .sending-message::after {
+      content: '';
+      animation: dots 1.5s infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
+    }
+
+    .mailto-btn {
+      display: inline-block;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-white);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 12px;
+    }
+
+    .mailto-btn:hover {
+      background: var(--border-color);
+      color: var(--text-green);
+    }
+
+    .error-message {
+      color: #f87171;
+      font-size: 13px;
+      margin-top: 10px;
+      padding-left: 2px;
+      animation: shake 0.4s ease;
+      line-height: 1.5;
+    }
+
+    .error-message.error-long {
+      font-size: 12px;
+      background: rgba(248, 113, 113, 0.1);
+      padding: 12px 14px;
+      border-radius: 8px;
+      border-left: 3px solid #f87171;
+      margin-top: 12px;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .idle-message {
+      color: var(--text-muted);
+      font-size: 13px;
+      font-style: italic;
+      margin-top: 24px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 2px solid var(--text-muted);
+      border-radius: 0 8px 8px 0;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .instruction {
+      color: var(--text-yellow);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    /* Input field */
+    .input-container {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .input-container::before {
+      content: '›';
+      color: var(--text-muted);
+    }
+
+    .input-container input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-white);
+      font-family: inherit;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .input-container input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Textarea field */
+    .textarea-container {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 8px;
+    }
+
+    .textarea-container textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-white);
+      font-family: inherit;
+      font-size: 15px;
+      outline: none;
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+    .textarea-container textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .textarea-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .back-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      opacity: 0.6;
+    }
+
+    .answer-multiline {
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .cursor {
+      width: 8px;
+      height: 20px;
+      background: var(--text-white);
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Multi-select */
+    .multi-select {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .select-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 15px;
+    }
+
+    .select-option:hover {
+      background: var(--input-bg);
+    }
+
+    .select-option.selected {
+      background: var(--input-bg);
+    }
+
+    .select-option .radio {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--text-muted);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .select-option.selected .radio {
+      border-color: var(--text-green);
+      background: var(--text-green);
+    }
+
+    .select-option.selected .radio::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--terminal-bg);
+      border-radius: 50%;
+    }
+
+    /* Submit container */
+    .submit-container {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 24px;
+    }
+
+    .selected-count {
+      color: var(--text-muted);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .selected-count::before {
+      content: '›';
+    }
+
+    .done-btn {
+      background: #1a4d2e;
+      color: var(--text-green);
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .done-btn:hover {
+      background: #236b3e;
+    }
+
+    /* Resize handle */
+    .resize-handle {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      opacity: 0.5;
+    }
+
+    /* Intro animation */
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #0d0d0d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s ease;
+    }
+
+    .intro-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .intro-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .intro-ascii {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.15;
+      letter-spacing: 0px;
+      white-space: pre;
+      color: var(--text-white);
+      opacity: 0;
+      transform: scale(0.9);
+      transition: all 0.6s ease;
+      text-align: center;
+    }
+
+    .intro-ascii.visible {
+      opacity: 1;
+      transform: scale(1);
+      animation: glitchOnce 0.6s ease 0.3s;
+    }
+
+    @keyframes glitchOnce {
+      0%, 100% {
+        text-shadow: none;
+        transform: scale(1) translate(0);
+      }
+      20% {
+        text-shadow: -2px 0 0 rgba(255,0,0,0.5), 2px 0 0 rgba(0,255,255,0.5);
+        transform: scale(1) translate(2px, 0);
+      }
+      40% {
+        text-shadow: 2px 0 0 rgba(255,0,0,0.5), -2px 0 0 rgba(0,255,255,0.5);
+        transform: scale(1) translate(-2px, 0);
+      }
+      60% {
+        text-shadow: -1px 0 0 rgba(255,0,0,0.3), 1px 0 0 rgba(0,255,255,0.3);
+        transform: scale(1) translate(1px, 0);
+      }
+      80% {
+        text-shadow: 1px 0 0 rgba(255,0,0,0.2), -1px 0 0 rgba(0,255,255,0.2);
+        transform: scale(1) translate(0);
+      }
+    }
+
+    .intro-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .intro-text.visible {
+      opacity: 1;
+    }
+
+    /* Typing effect */
+    .typing-text {
+      display: inline;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: var(--text-white);
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .terminal-body {
+        padding: 24px 20px;
+      }
+
+      .ascii-logo {
+        font-size: 10px;
+      }
+
+      .shape, .stipple {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- macOS Menu Bar -->
+  <div class="macos-menubar">
+    <div class="menubar-left">
+      <div class="menu-item apple-logo">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+        </svg>
+      </div>
+      <div class="menu-item app-name">Terminal</div>
+      <div class="menu-item">File</div>
+      <div class="menu-item">Edit</div>
+      <div class="menu-item">View</div>
+      <div class="menu-item">Help</div>
+    </div>
+    <div class="menubar-right">
+      <div class="menu-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 18c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6V8c0-3.07-1.63-5.64-4.5-6.32V1c0-.55-.45-1-1-1h-1c-.55 0-1 .45-1 1v.68C7.64 2.36 6 4.92 6 8v4l-2 2v1h16v-1l-2-2z"/></svg>
+      </div>
+      <div class="wifi-dropdown-container">
+        <div class="menu-icon" id="wifiIcon">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        </div>
+        <div class="wifi-dropdown" id="wifiDropdown">
+          <div class="wifi-dropdown-header">
+            <span>Wi-Fi</span>
+            <div class="wifi-toggle"></div>
+          </div>
+          <div class="wifi-dropdown-section">
+            <div class="wifi-dropdown-label">Current Network</div>
+            <div class="wifi-network connected">
+              <div class="wifi-network-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+              </div>
+              <div class="wifi-network-info">
+                <div class="wifi-network-name" id="currentNetworkName">Loading...</div>
+                <div class="wifi-network-status">Connected</div>
+              </div>
+              <svg class="wifi-network-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+          </div>
+          <div class="wifi-dropdown-divider"></div>
+          <div class="wifi-dropdown-section">
+            <div class="wifi-dropdown-label">Other Networks</div>
+            <div class="wifi-network">
+              <div class="wifi-network-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+              </div>
+              <div class="wifi-network-info">
+                <div class="wifi-network-name">Neighbor's WiFi</div>
+              </div>
+            </div>
+            <div class="wifi-network">
+              <div class="wifi-network-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" opacity="0.5"><path d="M12 12l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+              </div>
+              <div class="wifi-network-info">
+                <div class="wifi-network-name">FBI Surveillance Van</div>
+              </div>
+            </div>
+            <div class="wifi-network">
+              <div class="wifi-network-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" opacity="0.3"><path d="M12 12l3 3 3-3c-1.65-1.66-4.34-1.66-6 0z"/></svg>
+              </div>
+              <div class="wifi-network-info">
+                <div class="wifi-network-name">Pretty Fly for a Wi-Fi</div>
+              </div>
+            </div>
+          </div>
+          <div class="wifi-dropdown-divider"></div>
+          <div class="wifi-dropdown-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Network Preferences...
+          </div>
+        </div>
+      </div>
+      <div class="menu-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      </div>
+      <div class="menu-time" id="menuTime"></div>
+    </div>
+  </div>
+
+  <!-- Desktop Background -->
+  <div class="desktop-bg">
+    <video class="bg-video" autoplay loop muted playsinline>
+      <source src="ascii-art.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- Desktop Icons -->
+  <div class="desktop-icons">
+    <div class="desktop-icon">
+      <div class="icon-img readme-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+      </div>
+      <span>README</span>
+    </div>
+    <div class="desktop-icon" id="secretsFolder">
+      <div class="icon-img folder-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+      </div>
+      <span>Secrets</span>
+    </div>
+  </div>
+
+  <!-- Secrets Folder Modal -->
+  <div class="secrets-modal-overlay" id="secretsModal">
+    <div class="secrets-modal">
+      <div class="secrets-password-form" id="secretsPasswordForm">
+        <div class="secrets-modal-header">
+          <div class="secrets-modal-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          </div>
+          <div class="secrets-modal-title">"Secrets" is password protected</div>
+          <div class="secrets-modal-subtitle">Enter password to access this folder's contents</div>
+        </div>
+        <div class="secrets-modal-body">
+          <div class="secrets-input-group">
+            <input type="password" class="secrets-input" id="secretsPassword" placeholder="Password" autocomplete="off">
+            <div class="secrets-error" id="secretsError"></div>
+          </div>
+        </div>
+        <div class="secrets-modal-footer">
+          <button class="secrets-btn" id="secretsCancel">Cancel</button>
+          <button class="secrets-btn primary" id="secretsSubmit">Unlock</button>
+        </div>
+      </div>
+      <div class="secrets-revealed" id="secretsRevealed">
+        <div class="secrets-revealed-emoji" id="revealedEmoji">👀</div>
+        <div class="secrets-revealed-title" id="revealedTitle">Nice try...</div>
+        <div class="secrets-revealed-message" id="revealedMessage">Loading message...</div>
+        <button class="secrets-revealed-btn" id="secretsClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spotlight Search -->
+  <div class="spotlight-overlay" id="spotlightOverlay">
+    <div class="spotlight-container">
+      <div class="spotlight-search">
+        <svg class="spotlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <span class="spotlight-text" id="spotlightText"></span>
+        <span class="spotlight-cursor"></span>
+      </div>
+      <div class="spotlight-buttons">
+        <div class="spotlight-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="spotlight-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="spotlight-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </div>
+        <div class="spotlight-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- macOS Dock -->
+  <div class="macos-dock">
+    <div class="dock-container">
+      <a href="#" class="dock-item" data-tooltip="Finder" onclick="return false;">
+        <div class="dock-icon-placeholder finder-icon">
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="3" width="20" height="18" rx="2" fill="#4AA0D9"/>
+            <rect x="2" y="3" width="20" height="6" fill="#4AA0D9"/>
+            <circle cx="8" cy="13" r="1.5" fill="#1a1a1a"/>
+            <circle cx="16" cy="13" r="1.5" fill="#1a1a1a"/>
+            <path d="M8 17 Q12 19 16 17" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+      </a>
+      <a href="https://x.com" target="_blank" class="dock-item" data-tooltip="X">
+        <div class="dock-icon-placeholder x-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </div>
+      </a>
+      <a href="#" class="dock-item" data-tooltip="Messages" onclick="return false;">
+        <div class="dock-icon-placeholder messages-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        </div>
+      </a>
+      <a href="https://spotify.com" target="_blank" class="dock-item" data-tooltip="Spotify">
+        <div class="dock-icon-placeholder spotify-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        </div>
+      </a>
+      <a href="mailto:logan.spears@icloud.com" class="dock-item" data-tooltip="Mail">
+        <div class="dock-icon-placeholder mail-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        </div>
+      </a>
+      <a href="https://figma.com" target="_blank" class="dock-item" data-tooltip="Figma">
+        <div class="dock-icon-placeholder figma-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" fill="#F24E1E"/><path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" fill="#FF7262"/><path d="M12 9.5h3.5a3.5 3.5 0 1 1 0 7H12v-7z" fill="#1ABCFE"/><path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" fill="#0ACF83"/><path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" fill="#A259FF"/></svg>
+        </div>
+      </a>
+      <div class="dock-separator"></div>
+      <a href="#" class="dock-item" data-tooltip="Downloads">
+        <div class="dock-icon-placeholder downloads-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        </div>
+      </a>
+      <a href="#" class="dock-item" data-tooltip="Trash">
+        <div class="dock-icon-placeholder trash-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Intro overlay -->
+  <div class="intro-overlay" id="introOverlay">
+    <div class="intro-logo">
+      <pre class="intro-ascii" id="introAscii">██╗     ███████╗████████╗███████╗    ██████╗ ██╗   ██╗██╗██╗     ██████╗
+██║     ██╔════╝╚══██╔══╝██╔════╝    ██╔══██╗██║   ██║██║██║     ██╔══██╗
+██║     █████╗     ██║   ███████╗    ██████╔╝██║   ██║██║██║     ██║  ██║
+██║     ██╔══╝     ██║   ╚════██║    ██╔══██╗██║   ██║██║██║     ██║  ██║
+███████╗███████╗   ██║   ███████║    ██████╔╝╚██████╔╝██║███████╗██████╔╝
+╚══════╝╚══════╝   ╚═╝   ╚══════╝    ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝</pre>
+      <div class="intro-text" id="introText">
+        <span class="typing-text" id="typingText"></span><span class="typing-cursor"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terminal window -->
+  <div class="terminal" id="terminal" style="opacity: 0; transform: translate(-50%, -50%) translateY(20px);">
+    <div class="terminal-header">
+      <div class="traffic-lights">
+        <div class="traffic-light red" id="btnClose" title="Close"></div>
+        <div class="traffic-light yellow" id="btnMinimize" title="Minimize"></div>
+        <div class="traffic-light green" id="btnFullscreen" title="Fullscreen"></div>
+      </div>
+      <div class="terminal-title">logan — work with me</div>
+    </div>
+
+    <div class="terminal-body" id="terminalBody">
+      <!-- ASCII Logo -->
+      <pre class="ascii-logo">██╗     ███████╗████████╗███████╗    ██████╗ ██╗   ██╗██╗██╗     ██████╗
+██║     ██╔════╝╚══██╔══╝██╔════╝    ██╔══██╗██║   ██║██║██║     ██╔══██╗
+██║     █████╗     ██║   ███████╗    ██████╔╝██║   ██║██║██║     ██║  ██║
+██║     ██╔══╝     ██║   ╚════██║    ██╔══██╗██║   ██║██║██║     ██║  ██║
+███████╗███████╗   ██║   ███████║    ██████╔╝╚██████╔╝██║███████╗██████╔╝
+╚══════╝╚══════╝   ╚═╝   ╚══════╝    ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝</pre>
+
+      <p class="tagline">
+        I build websites, apps, and weird digital things for people with ideas and zero patience for boring.
+      </p>
+
+      <p class="warning">
+        Fair warning: I move fast, ask dumb questions, and will probably suggest something unhinged at least once. (Translation: we'll have fun and ship something cool.)
+      </p>
+
+      <div class="section-divider">FIRST, WHO ARE YOU</div>
+
+      <!-- Form questions will be added dynamically -->
+      <div id="formContainer"></div>
+
+      <!-- Idle message -->
+      <div class="idle-message" id="idleMessage" style="display: none;"></div>
+    </div>
+
+    <span class="resize-handle">//</span>
+  </div>
+
+  <script>
+    // Form data
+    const formSteps = [
+      {
+        type: 'text',
+        question: "What's your name?",
+        key: 'name',
+        validate: 'name',
+        successMessage: (val) => `${val}! Let's go.`
+      },
+      {
+        type: 'text',
+        question: "What's your email?",
+        hint: "So I can slide into your inbox. <em>Professionally</em>...of course.",
+        key: 'email',
+        validate: 'email'
+      },
+      {
+        type: 'divider',
+        text: 'THE ACTUAL PROJECT'
+      },
+      {
+        type: 'textarea',
+        question: "What are we working with?",
+        hint: "Got an existing site? A half-built app? A napkin sketch? A vibe? Drop a URL or just describe the chaos.",
+        key: 'existing',
+        placeholder: 'https://... or "it\'s currently a Google Doc and a prayer"'
+      },
+      {
+        type: 'textarea',
+        question: "What do you actually want?",
+        hint: "Skip the corporate speak. What's the dream? What would make you unreasonably happy?",
+        key: 'goals',
+        placeholder: 'Be specific, be vague, be unhinged. All valid.'
+      }
+    ];
+
+    let currentStep = 0;
+    const formData = {};
+    const formContainer = document.getElementById('formContainer');
+    const stepHistory = []; // Track rendered elements for going back
+
+    // Validation functions
+    const nameErrors = [
+      "C'mon, give me something to work with here.",
+      "That's not a name, that's a cry for help.",
+      "I'm gonna need an actual name. Even a fake one. Just make it believable.",
+      "Look, I don't need your government name, but I need *something*.",
+      "Nice try. Real name please. Or a convincing alias.",
+    ];
+
+    const emailErrors = [
+      "That's not an email. That's just letters having an identity crisis.",
+      "I need a real email. Carrier pigeons are not supported at this time.",
+      "Invalid email. Did your keyboard sneeze? Try again.",
+      "That email bounced just looking at it. We both know you can do better.",
+      "Gonna need something with an @ in it. I don't make the rules. (I do, but still.)",
+    ];
+
+    const emailMissingTldErrors = [
+      "You forgot the .com (or .whatever). We were SO close.",
+      "That email's missing its ending. Like a sentence without a period",
+      "Almost! Just need the .com, .io, .xyz... you know, the grand finale.",
+      "Email's looking incomplete. Did you get distracted mid-type? Relatable, but fix it.",
+    ];
+
+    const emailFakeErrors = [
+      "Look, I get it. Giving strangers your email feels weird. But test@test.com isn't gonna work here. Hit me with the real one — I promise to only use it for cool stuff.",
+      "Nice try with the fake email. I respect the hustle, but I actually need to reach you. Drop the real one and I'll make it worth your while.",
+      "That email has 'I don't trust this form' energy. Fair. But I'm not gonna spam you — I just want to talk about your project. Real email, please?",
+      "Caught that fake email. No judgment, we've all been there. But if you actually want me to help build something cool, I'm gonna need the real deal.",
+      "That's a fake email and we both know it. Look, I hate spam too. But I literally cannot help you if I can't reach you. Real one this time?",
+    ];
+
+    const idleMessages = [
+      "Still there? No pressure. Well, a little pressure.",
+      "Take your time. I'll just be here. Waiting. Patiently. *taps fingers*",
+      "Did you go get coffee? Bring me one.",
+      "I see you thinking. Or panicking. Both valid.",
+      "Writer's block? Just type anything. I won't judge. (I might judge a little.)",
+      "The cursor is getting lonely.",
+      "Fun fact: while you're thinking, I'm also thinking. About snacks mostly.",
+      "You can do this. I believe in you. Kind of.",
+      "Is this an existential crisis or are you just alt-tabbed?",
+    ];
+
+    function validateName(value) {
+      if (!value || value.trim().length < 2) return false;
+      // Check for obviously fake names
+      const fakeNames = ['test', 'asdf', 'qwerty', 'aaa', 'xxx', 'abc', '123', 'name', 'your name', 'n/a', 'na', 'none'];
+      if (fakeNames.includes(value.toLowerCase().trim())) return false;
+      // Check for at least one letter
+      if (!/[a-zA-Z]/.test(value)) return false;
+      return true;
+    }
+
+    function validateEmail(value) {
+      if (!value) return { valid: false, reason: 'empty' };
+
+      const lowerValue = value.toLowerCase().trim();
+
+      // Check if missing @ entirely
+      if (!lowerValue.includes('@')) {
+        return { valid: false, reason: 'invalid' };
+      }
+
+      // Check if missing TLD (has @ but no dot after it)
+      const afterAt = lowerValue.split('@')[1];
+      if (!afterAt || !afterAt.includes('.')) {
+        return { valid: false, reason: 'missingTld' };
+      }
+
+      // Basic email regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(lowerValue)) return { valid: false, reason: 'invalid' };
+
+      // Extract parts
+      const localPart = lowerValue.split('@')[0];
+      const domain = afterAt;
+      const domainName = domain.split('.')[0];
+      const tld = domain.split('.').pop();
+
+      // Check for obviously fake/test domains
+      const fakeDomains = [
+        'test.com', 'fake.com', 'example.com', 'asdf.com', 'aaa.com',
+        'email.com', 'none.com', 'mail.com', 'temp.com', 'trash.com',
+        'noemail.com', 'notreal.com', 'invalid.com', 'null.com',
+        'abc.com', 'xyz.com', 'qwerty.com', 'sample.com', 'demo.com',
+        'placeholder.com', 'domain.com', 'website.com', 'company.com',
+        'business.com', 'myemail.com', 'testemail.com', 'mailinator.com',
+        'guerrillamail.com', 'tempmail.com', 'throwaway.com', 'fakeinbox.com',
+        '10minutemail.com', 'sharklasers.com', 'trashmail.com'
+      ];
+      if (fakeDomains.includes(domain)) return { valid: false, reason: 'fake' };
+
+      // Check for fake domain patterns
+      const fakeDomainPatterns = ['test', 'fake', 'temp', 'trash', 'junk', 'spam', 'throw', 'disposable'];
+      if (fakeDomainPatterns.some(p => domainName.includes(p))) {
+        return { valid: false, reason: 'fake' };
+      }
+
+      // Check for keyboard mashing / obvious fakes in local part
+      const fakeLocals = [
+        'test', 'asdf', 'qwerty', 'aaa', 'xxx', 'abc', '123', 'email',
+        'none', 'fake', 'admin', 'info', 'hello', 'hi', 'no', 'nope',
+        'user', 'name', 'person', 'someone', 'anybody', 'nobody',
+        'sample', 'demo', 'example', 'placeholder', 'null', 'void',
+        'na', 'n/a', 'nil', 'undefined', 'temp', 'tmp', 'junk',
+        'a', 'b', 'c', 'x', 'y', 'z', 'aa', 'bb', 'xx', 'yy', 'zz',
+        'qwe', 'asd', 'zxc', 'qwer', 'asdf', 'zxcv', '1234', '12345',
+        'abcd', 'abcde', 'abcdef', 'testing', 'tester', 'testtest'
+      ];
+      if (fakeLocals.includes(localPart)) return { valid: false, reason: 'fake' };
+
+      // Check for repetitive characters (aaaa@, xxxx@, etc.)
+      if (/^(.)\1{2,}$/.test(localPart)) {
+        return { valid: false, reason: 'fake' };
+      }
+
+      // Check for sequential keyboard patterns
+      const keyboardPatterns = ['qwerty', 'asdfgh', 'zxcvbn', '123456', 'qazwsx', 'abcdef'];
+      if (keyboardPatterns.some(p => localPart.includes(p))) {
+        return { valid: false, reason: 'fake' };
+      }
+
+      // Check for suspiciously short local parts with numbers only
+      if (/^\d{1,4}$/.test(localPart)) {
+        return { valid: false, reason: 'fake' };
+      }
+
+      // Check for invalid TLDs
+      const suspiciousTlds = ['test', 'fake', 'invalid', 'example', 'localhost'];
+      if (suspiciousTlds.includes(tld)) {
+        return { valid: false, reason: 'fake' };
+      }
+
+      // Check minimum length (a@b.co is technically valid but suspicious)
+      if (localPart.length < 2 || domainName.length < 2) {
+        return { valid: false, reason: 'fake' };
+      }
+
+      return { valid: true };
+    }
+
+    function getRandomError(errors) {
+      return errors[Math.floor(Math.random() * errors.length)];
+    }
+
+    // Idle timer
+    let idleTimer = null;
+    let idleMessageTimer = null;
+    let idleMessageIndex = 0;
+    const IDLE_DELAY = 15000; // 15 seconds before first message
+    const IDLE_INTERVAL = 20000; // 20 seconds between subsequent messages
+
+    function showIdleMessage() {
+      const idleEl = document.getElementById('idleMessage');
+      if (idleEl) {
+        idleEl.textContent = idleMessages[idleMessageIndex % idleMessages.length];
+        idleEl.style.display = 'block';
+        idleEl.style.animation = 'none';
+        idleEl.offsetHeight; // Trigger reflow
+        idleEl.style.animation = 'fadeIn 0.4s ease';
+        idleMessageIndex++;
+
+        // Schedule next message
+        idleMessageTimer = setTimeout(showIdleMessage, IDLE_INTERVAL);
+      }
+    }
+
+    function resetIdleTimer() {
+      // Clear existing timers
+      if (idleTimer) clearTimeout(idleTimer);
+      if (idleMessageTimer) clearTimeout(idleMessageTimer);
+
+      // Hide idle message
+      const idleEl = document.getElementById('idleMessage');
+      if (idleEl) {
+        idleEl.style.display = 'none';
+      }
+
+      // Start new timer
+      idleTimer = setTimeout(showIdleMessage, IDLE_DELAY);
+    }
+
+    // Go back function
+    function goBack() {
+      if (stepHistory.length === 0) return false;
+
+      // Remove the current active input/question group
+      const currentQuestionGroups = formContainer.querySelectorAll('.question-group');
+      const activeGroup = currentQuestionGroups[currentQuestionGroups.length - 1];
+      if (activeGroup) {
+        activeGroup.remove();
+      }
+
+      // Pop the last completed entry
+      const lastEntry = stepHistory.pop();
+
+      // If it's a divider, remove it and keep going back
+      if (lastEntry.type === 'divider') {
+        if (lastEntry.element) {
+          lastEntry.element.remove();
+        }
+        currentStep = lastEntry.stepIndex;
+        return goBack();
+      }
+
+      // Remove the previous answer element
+      if (lastEntry.element) {
+        lastEntry.element.remove();
+      }
+
+      // Clear the stored data
+      if (lastEntry.key) {
+        delete formData[lastEntry.key];
+      }
+
+      // Go back to that step
+      currentStep = lastEntry.stepIndex;
+
+      // Re-render the step
+      renderCurrentStep();
+
+      return true;
+    }
+
+    // Reset idle on any input
+    document.addEventListener('keydown', resetIdleTimer);
+    document.addEventListener('mousemove', () => {
+      // Only reset on significant movement, not every pixel
+      if (!window.lastMouseMove || Date.now() - window.lastMouseMove > 1000) {
+        window.lastMouseMove = Date.now();
+        resetIdleTimer();
+      }
+    });
+
+    // Intro animation
+    const introOverlay = document.getElementById('introOverlay');
+    const introAscii = document.getElementById('introAscii');
+    const introText = document.getElementById('introText');
+    const typingText = document.getElementById('typingText');
+    const terminal = document.getElementById('terminal');
+
+    const loadingMessages = [
+      'Booting up...',
+      'Pretending to load things...',
+      'Let\'s build something.'
+    ];
+
+    let messageIndex = 0;
+    let charIndex = 0;
+
+    function typeMessage() {
+      if (messageIndex < loadingMessages.length) {
+        const message = loadingMessages[messageIndex];
+        if (charIndex < message.length) {
+          typingText.textContent += message[charIndex];
+          charIndex++;
+          setTimeout(typeMessage, 30);
+        } else {
+          if (messageIndex < loadingMessages.length - 1) {
+            setTimeout(() => {
+              typingText.textContent = '';
+              charIndex = 0;
+              messageIndex++;
+              typeMessage();
+            }, 500);
+          } else {
+            // Done typing, show terminal
+            setTimeout(showTerminal, 800);
+          }
+        }
+      }
+    }
+
+    function showTerminal() {
+      introOverlay.classList.add('hidden');
+      terminal.style.transition = 'all 0.6s ease';
+      terminal.style.opacity = '1';
+      terminal.style.transform = 'translate(-50%, -50%)';
+
+      setTimeout(() => {
+        renderCurrentStep();
+        resetIdleTimer(); // Start idle timer
+      }, 400);
+    }
+
+    // Start intro
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        introAscii.classList.add('visible');
+      }, 300);
+
+      setTimeout(() => {
+        introText.classList.add('visible');
+        typeMessage();
+      }, 1000);
+    });
+
+    // Traffic light buttons
+    const btnClose = document.getElementById('btnClose');
+    const btnMinimize = document.getElementById('btnMinimize');
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    const spotlightOverlay = document.getElementById('spotlightOverlay');
+    const spotlightText = document.getElementById('spotlightText');
+
+    // Funny spotlight messages
+    const closeMessages = [
+      "where did the form go...",
+      "wait come back",
+      "ctrl+z ctrl+z CTRL+Z",
+      "that was a mistake wasn't it",
+      "reopening because I care",
+      "you need me and you know it",
+      "nice try but no",
+      "the form misses you already",
+      "error: cannot escape destiny",
+      "form.exe has feelings too"
+    ];
+
+    const minimizeMessages = [
+      "minimized? in THIS economy?",
+      "you'll be back in 3... 2...",
+      "briefly pretending to multitask",
+      "the dock is lonely without me",
+      "maximizing... your potential",
+      "undoing your poor life choices",
+      "form restoration in progress",
+      "you know you missed me"
+    ];
+
+    function showSpotlightAndReopen(messages) {
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      spotlightText.textContent = '';
+      spotlightOverlay.classList.add('visible');
+
+      // Type out the message
+      let charIndex = 0;
+      const typeInterval = setInterval(() => {
+        if (charIndex < message.length) {
+          spotlightText.textContent += message[charIndex];
+          charIndex++;
+        } else {
+          clearInterval(typeInterval);
+
+          // Wait a moment, then reopen
+          setTimeout(() => {
+            spotlightOverlay.classList.remove('visible');
+
+            setTimeout(() => {
+              terminal.style.display = 'flex';
+              terminal.classList.remove('closing', 'minimizing');
+              terminal.style.opacity = '1';
+              terminal.style.transform = 'translate(-50%, -50%)';
+            }, 200);
+          }, 1200);
+        }
+      }, 50);
+    }
+
+    btnClose.addEventListener('click', () => {
+      terminal.classList.add('closing');
+      setTimeout(() => {
+        terminal.style.display = 'none';
+        showSpotlightAndReopen(closeMessages);
+      }, 300);
+    });
+
+    btnMinimize.addEventListener('click', () => {
+      terminal.classList.add('minimizing');
+      setTimeout(() => {
+        terminal.style.display = 'none';
+        showSpotlightAndReopen(minimizeMessages);
+      }, 400);
+    });
+
+    btnFullscreen.addEventListener('click', () => {
+      if (terminal.classList.contains('fullscreen')) {
+        terminal.classList.remove('fullscreen');
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } else {
+        terminal.classList.add('fullscreen');
+        if (terminal.requestFullscreen) {
+          terminal.requestFullscreen().catch(() => {});
+        }
+      }
+    });
+
+    // Exit fullscreen on Escape
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        terminal.classList.remove('fullscreen');
+      }
+    });
+
+    // Cmd+Space to show spotlight (just for fun)
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'Space') {
+        e.preventDefault();
+        if (!spotlightOverlay.classList.contains('visible') && terminal.style.display !== 'none') {
+          const funMessages = [
+            "searching for motivation...",
+            "looking for my will to live",
+            "query: how to fill out forms",
+            "google: am I doing this right",
+            "where is the any key"
+          ];
+          spotlightText.textContent = '';
+          spotlightOverlay.classList.add('visible');
+
+          const message = funMessages[Math.floor(Math.random() * funMessages.length)];
+          let charIndex = 0;
+          const typeInterval = setInterval(() => {
+            if (charIndex < message.length) {
+              spotlightText.textContent += message[charIndex];
+              charIndex++;
+            } else {
+              clearInterval(typeInterval);
+              setTimeout(() => {
+                spotlightOverlay.classList.remove('visible');
+              }, 1500);
+            }
+          }, 50);
+        }
+      }
+    });
+
+    // Menu bar clock
+    function updateMenuTime() {
+      const now = new Date();
+      const options = {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      };
+      const timeStr = now.toLocaleDateString('en-US', options).replace(',', '');
+      document.getElementById('menuTime').textContent = timeStr;
+    }
+
+    updateMenuTime();
+    setInterval(updateMenuTime, 1000);
+
+    // WiFi dropdown
+    const wifiIcon = document.getElementById('wifiIcon');
+    const wifiDropdown = document.getElementById('wifiDropdown');
+    const networkNameEl = document.getElementById('currentNetworkName');
+
+    // Try to detect network info
+    function detectNetwork() {
+      // Browsers can't access actual WiFi SSID for privacy reasons
+      // But we can detect connection type and make educated guesses
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+      if (connection) {
+        const type = connection.effectiveType || connection.type;
+        if (type === 'wifi' || connection.type === 'wifi') {
+          // Can't get actual name, so show a fun placeholder
+          networkNameEl.textContent = 'Your WiFi ✓';
+        } else if (type === '4g' || type === 'cellular') {
+          networkNameEl.textContent = 'Mobile Data';
+        } else if (type === 'ethernet') {
+          networkNameEl.textContent = 'Ethernet';
+        } else {
+          networkNameEl.textContent = 'Connected';
+        }
+      } else {
+        // Fallback - we know they're online if they loaded the page
+        if (navigator.onLine) {
+          networkNameEl.textContent = 'Connected Network';
+        } else {
+          networkNameEl.textContent = 'Not Connected';
+        }
+      }
+    }
+
+    detectNetwork();
+
+    // Toggle dropdown
+    wifiIcon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wifiDropdown.classList.toggle('visible');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!wifiDropdown.contains(e.target) && e.target !== wifiIcon) {
+        wifiDropdown.classList.remove('visible');
+      }
+    });
+
+    // Secrets Folder
+    const secretsFolder = document.getElementById('secretsFolder');
+    const secretsModal = document.getElementById('secretsModal');
+    const secretsPasswordForm = document.getElementById('secretsPasswordForm');
+    const secretsRevealed = document.getElementById('secretsRevealed');
+    const secretsPassword = document.getElementById('secretsPassword');
+    const secretsError = document.getElementById('secretsError');
+    const secretsCancel = document.getElementById('secretsCancel');
+    const secretsSubmit = document.getElementById('secretsSubmit');
+    const secretsClose = document.getElementById('secretsClose');
+    const revealedEmoji = document.getElementById('revealedEmoji');
+    const revealedTitle = document.getElementById('revealedTitle');
+    const revealedMessage = document.getElementById('revealedMessage');
+
+    let passwordAttempts = 0;
+
+    const secretsResponses = [
+      {
+        emoji: '👀',
+        title: 'Caught you snooping...',
+        message: "You really thought I'd put my actual secrets on a website? Bold. I respect it. But also... no."
+      },
+      {
+        emoji: '🤨',
+        title: 'Interesting...',
+        message: "The password was 'trust-issues' and you didn't even try it. Just kidding. There is no password. There are no secrets. Only marketing."
+      },
+      {
+        emoji: '😏',
+        title: 'You absolute legend.',
+        message: "Most people just fill out the form. You? You're out here trying to break into fake folders on a stranger's website. We should work together."
+      },
+      {
+        emoji: '🕵️',
+        title: 'Access Denied (jk)',
+        message: "Plot twist: the real secret is that I spent way too much time coding this fake password prompt instead of doing actual work."
+      },
+      {
+        emoji: '🎣',
+        title: 'Hook, line, and sinker.',
+        message: "Congrats, you found the honeypot. The only thing in this folder is my respect for your curiosity. And this message. That's it. That's the secret."
+      },
+      {
+        emoji: '🤝',
+        title: 'Okay fine, you got me.',
+        message: "The secret is I'm just a guy who likes building weird stuff on the internet. Now stop hacking my fake desktop and fill out the form already."
+      },
+      {
+        emoji: '👁️',
+        title: 'I see you.',
+        message: "You clicked the suspicious folder. On a website. That a stranger made. Your operational security is... questionable. But I like your style."
+      }
+    ];
+
+    const wrongPasswordMessages = [
+      "Nope. Try again. Or don't. I can do this all day.",
+      "Wrong password. Shocking, I know.",
+      "That's not it. Have you tried 'password123'? (It's also not that.)",
+      "Incorrect. But points for effort.",
+      "Access denied. The password is definitely not your birthday.",
+      "Wrong. Want a hint? There isn't one.",
+      "Nah. But I admire your persistence.",
+      "Still no. At this point you should probably just fill out the form."
+    ];
+
+    function showSecretsModal() {
+      secretsModal.classList.add('visible');
+      secretsPasswordForm.classList.remove('hidden');
+      secretsRevealed.classList.remove('visible');
+      secretsPassword.value = '';
+      secretsError.textContent = '';
+      setTimeout(() => secretsPassword.focus(), 100);
+    }
+
+    function hideSecretsModal() {
+      secretsModal.classList.remove('visible');
+      passwordAttempts = 0;
+    }
+
+    function showRevealedMessage() {
+      const response = secretsResponses[Math.floor(Math.random() * secretsResponses.length)];
+      revealedEmoji.textContent = response.emoji;
+      revealedTitle.textContent = response.title;
+      revealedMessage.textContent = response.message;
+
+      secretsPasswordForm.classList.add('hidden');
+      secretsRevealed.classList.add('visible');
+    }
+
+    function handlePasswordSubmit() {
+      const password = secretsPassword.value.trim();
+
+      if (!password) {
+        secretsError.textContent = "You gotta type something...";
+        return;
+      }
+
+      passwordAttempts++;
+
+      // After 3 attempts, just show the reveal
+      if (passwordAttempts >= 3) {
+        showRevealedMessage();
+        return;
+      }
+
+      // Show a wrong password message
+      secretsError.textContent = wrongPasswordMessages[Math.floor(Math.random() * wrongPasswordMessages.length)];
+      secretsPassword.value = '';
+      secretsPassword.focus();
+    }
+
+    secretsFolder.addEventListener('dblclick', showSecretsModal);
+    secretsFolder.addEventListener('click', (e) => {
+      // Single click selects, double click opens
+      // But let's also open on single click after a delay if no double click
+      if (e.detail === 1) {
+        setTimeout(() => {
+          if (e.detail === 1) {
+            // It was a single click, not the first of a double
+          }
+        }, 300);
+      }
+    });
+
+    // Actually, let's just make it work on single click for mobile/simplicity
+    secretsFolder.addEventListener('click', showSecretsModal);
+
+    secretsCancel.addEventListener('click', hideSecretsModal);
+    secretsClose.addEventListener('click', hideSecretsModal);
+
+    secretsSubmit.addEventListener('click', handlePasswordSubmit);
+
+    secretsPassword.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handlePasswordSubmit();
+      } else if (e.key === 'Escape') {
+        hideSecretsModal();
+      }
+    });
+
+    // Close modal on overlay click
+    secretsModal.addEventListener('click', (e) => {
+      if (e.target === secretsModal) {
+        hideSecretsModal();
+      }
+    });
+
+    // Render form step
+    function renderCurrentStep() {
+      if (currentStep >= formSteps.length) {
+        // Form complete
+        renderComplete();
+        return;
+      }
+
+      const step = formSteps[currentStep];
+
+      if (step.type === 'divider') {
+        const divider = document.createElement('div');
+        divider.className = 'section-divider';
+        divider.textContent = step.text;
+        formContainer.appendChild(divider);
+
+        // Track divider in history
+        stepHistory.push({
+          stepIndex: currentStep,
+          element: divider,
+          type: 'divider'
+        });
+
+        currentStep++;
+        renderCurrentStep();
+        return;
+      }
+
+      const group = document.createElement('div');
+      group.className = 'question-group';
+      group.style.animationDelay = '0.1s';
+
+      if (step.type === 'text') {
+        group.innerHTML = `
+          <div class="question">${step.question}</div>
+          ${step.hint ? `<div class="question-hint">${step.hint}</div>` : ''}
+          <div class="input-container">
+            <input type="text" id="currentInput" placeholder="${step.placeholder || ''}" autofocus>
+            <div class="cursor"></div>
+          </div>
+          <div class="error-message" id="errorMessage" style="display: none;"></div>
+          ${stepHistory.length > 0 ? '<div class="back-hint">esc to go back</div>' : ''}
+        `;
+        formContainer.appendChild(group);
+
+        const input = document.getElementById('currentInput');
+        const errorMessage = document.getElementById('errorMessage');
+        input.focus();
+
+        input.addEventListener('keydown', (e) => {
+          // Go back on Escape
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            if (goBack()) {
+              return;
+            }
+          }
+
+          if (e.key === 'Enter') {
+            const value = input.value.trim();
+            if (!value && !step.optional) return;
+
+            // Validation
+            if (step.validate === 'name' && !validateName(value)) {
+              errorMessage.textContent = getRandomError(nameErrors);
+              errorMessage.style.display = 'block';
+              input.value = '';
+              input.focus();
+              resetIdleTimer();
+              return;
+            }
+
+            if (step.validate === 'email') {
+              const emailResult = validateEmail(value);
+              if (!emailResult.valid) {
+                if (emailResult.reason === 'missingTld') {
+                  errorMessage.textContent = getRandomError(emailMissingTldErrors);
+                } else if (emailResult.reason === 'fake') {
+                  errorMessage.textContent = getRandomError(emailFakeErrors);
+                  errorMessage.classList.add('error-long');
+                } else {
+                  errorMessage.textContent = getRandomError(emailErrors);
+                }
+                errorMessage.style.display = 'block';
+                // Don't clear the input for fake emails so they can see what they typed
+                if (emailResult.reason !== 'fake') {
+                  input.value = '';
+                }
+                input.focus();
+                resetIdleTimer();
+                return;
+              }
+            }
+
+            formData[step.key] = value || '(skipped)';
+
+            // Track in history for going back
+            stepHistory.push({
+              stepIndex: currentStep,
+              key: step.key,
+              element: group,
+              type: 'text'
+            });
+
+            // Show the answer
+            const inputContainer = group.querySelector('.input-container');
+            const backHint = group.querySelector('.back-hint');
+            inputContainer.remove();
+            errorMessage.remove();
+            if (backHint) backHint.remove();
+
+            const answer = document.createElement('div');
+            answer.className = 'answer';
+            answer.textContent = value || '(skipped)';
+            group.appendChild(answer);
+
+            // Show success message if exists
+            if (step.successMessage && value) {
+              const success = document.createElement('div');
+              success.className = 'success-message';
+              success.textContent = step.successMessage(value);
+              group.appendChild(success);
+            }
+
+            currentStep++;
+            setTimeout(renderCurrentStep, 300);
+          }
+        });
+      }
+
+      if (step.type === 'textarea') {
+        group.innerHTML = `
+          <div class="question">${step.question}</div>
+          ${step.hint ? `<div class="question-hint">${step.hint}</div>` : ''}
+          <div class="textarea-container">
+            <textarea id="currentTextarea" placeholder="${step.placeholder || ''}" rows="4" autofocus></textarea>
+          </div>
+          <div class="textarea-hint">Cmd+Enter to submit${stepHistory.length > 0 ? ' · esc to go back' : ''}</div>
+        `;
+        formContainer.appendChild(group);
+
+        const textarea = document.getElementById('currentTextarea');
+        textarea.focus();
+
+        textarea.addEventListener('keydown', (e) => {
+          // Go back on Escape (only if textarea is empty)
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            if (goBack()) {
+              return;
+            }
+          }
+
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            const value = textarea.value.trim();
+            if (!value && !step.optional) return;
+
+            formData[step.key] = value || '(skipped)';
+
+            // Track in history for going back
+            stepHistory.push({
+              stepIndex: currentStep,
+              key: step.key,
+              element: group,
+              type: 'textarea'
+            });
+
+            // Show the answer
+            const textareaContainer = group.querySelector('.textarea-container');
+            const textareaHint = group.querySelector('.textarea-hint');
+            textareaContainer.remove();
+            textareaHint.remove();
+
+            const answer = document.createElement('div');
+            answer.className = 'answer answer-multiline';
+            answer.textContent = value || '(skipped)';
+            group.appendChild(answer);
+
+            currentStep++;
+            setTimeout(renderCurrentStep, 300);
+          }
+        });
+      }
+
+      if (step.type === 'multiselect') {
+        const selectedOptions = new Set();
+
+        group.innerHTML = `
+          <div class="question">${step.question}</div>
+          ${step.hint ? `<div class="question-hint">${step.hint}</div>` : ''}
+          ${step.instruction ? `<div class="instruction">${step.instruction}</div>` : ''}
+          <div class="multi-select" id="multiSelect">
+            ${step.options.map((opt, i) => `
+              <div class="select-option" data-value="${opt}" tabindex="0">
+                <div class="radio"></div>
+                <span>${opt}</span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="submit-container">
+            <span class="selected-count"><span id="selectedCount">0</span> selected</span>
+            <button class="done-btn" id="doneBtn">Done</button>
+          </div>
+        `;
+        formContainer.appendChild(group);
+
+        const options = group.querySelectorAll('.select-option');
+        const countEl = document.getElementById('selectedCount');
+        let focusedIndex = 0;
+
+        function updateFocus() {
+          options.forEach((opt, i) => {
+            if (i === focusedIndex) {
+              opt.style.background = 'var(--input-bg)';
+            } else if (!opt.classList.contains('selected')) {
+              opt.style.background = 'transparent';
+            }
+          });
+        }
+
+        options.forEach((opt, i) => {
+          opt.addEventListener('click', () => {
+            opt.classList.toggle('selected');
+            const value = opt.dataset.value;
+            if (selectedOptions.has(value)) {
+              selectedOptions.delete(value);
+            } else {
+              selectedOptions.add(value);
+            }
+            countEl.textContent = selectedOptions.size;
+          });
+        });
+
+        document.addEventListener('keydown', function handler(e) {
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusedIndex = Math.max(0, focusedIndex - 1);
+            updateFocus();
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusedIndex = Math.min(options.length - 1, focusedIndex + 1);
+            updateFocus();
+          } else if (e.key === ' ') {
+            e.preventDefault();
+            options[focusedIndex].click();
+          } else if (e.key === 'Enter') {
+            document.removeEventListener('keydown', handler);
+            submitMultiSelect();
+          }
+        });
+
+        document.getElementById('doneBtn').addEventListener('click', submitMultiSelect);
+
+        function submitMultiSelect() {
+          formData[step.key] = Array.from(selectedOptions);
+
+          // Remove multi-select UI
+          group.querySelector('.multi-select').remove();
+          group.querySelector('.submit-container').remove();
+
+          // Show answers
+          const answersDiv = document.createElement('div');
+          if (selectedOptions.size > 0) {
+            selectedOptions.forEach(opt => {
+              const answer = document.createElement('div');
+              answer.className = 'answer';
+              answer.textContent = opt;
+              answersDiv.appendChild(answer);
+            });
+          } else {
+            const answer = document.createElement('div');
+            answer.className = 'answer';
+            answer.textContent = '(none selected)';
+            answersDiv.appendChild(answer);
+          }
+          group.appendChild(answersDiv);
+
+          currentStep++;
+          setTimeout(renderCurrentStep, 300);
+        }
+
+        updateFocus();
+      }
+
+      // Scroll to bottom
+      const terminalBody = document.getElementById('terminalBody');
+      terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    async function renderComplete() {
+      // Stop idle messages
+      if (idleTimer) clearTimeout(idleTimer);
+      if (idleMessageTimer) clearTimeout(idleMessageTimer);
+      const idleEl = document.getElementById('idleMessage');
+      if (idleEl) idleEl.style.display = 'none';
+
+      const group = document.createElement('div');
+      group.className = 'question-group';
+      group.innerHTML = `
+        <div class="section-divider">SENDING</div>
+        <div class="sending-message">Firing off your message...</div>
+      `;
+      formContainer.appendChild(group);
+
+      const terminalBody = document.getElementById('terminalBody');
+      terminalBody.scrollTop = terminalBody.scrollHeight;
+
+      // Send email via Formsubmit
+      try {
+        const response = await fetch('https://formsubmit.co/ajax/logan.spears@icloud.com', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            name: formData.name || 'Anonymous',
+            email: formData.email || 'No email provided',
+            _subject: `New project inquiry from ${formData.name || 'someone'}`,
+            existing_project: formData.existing || 'Not provided',
+            project_goals: formData.goals || 'Not provided'
+          })
+        });
+
+        if (response.ok) {
+          group.innerHTML = `
+            <div class="section-divider">YOU'RE IN</div>
+            <div class="success-message">
+              Got it. I'll read this, think about it way too much, and hit you back within 48 hours. (Probably sooner. I have no chill.)
+            </div>
+          `;
+        } else {
+          throw new Error('Failed to send');
+        }
+      } catch (error) {
+        // Fallback: show mailto link
+        const mailtoLink = `mailto:logan.spears@icloud.com?subject=${encodeURIComponent(`Project inquiry from ${formData.name}`)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\nExisting Project:\n${formData.existing}\n\nProject Goals:\n${formData.goals}`)}`;
+
+        group.innerHTML = `
+          <div class="section-divider">ALMOST THERE</div>
+          <div class="warning">
+            Hmm, the auto-send didn't work. No worries — click below to send via email instead.
+          </div>
+          <a href="${mailtoLink}" class="mailto-btn" target="_blank">Open Email Client</a>
+        `;
+      }
+
+      terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+  </script>
+
+</body>
+</html>
