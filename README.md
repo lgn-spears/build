@@ -1,95 +1,113 @@
 # TurboQuant
 
-**Online Vector Quantization with Near-optimal Distortion Rate**
+**The thing behind the thing for LLM compression on Apple Silicon.**
 
-A PyTorch implementation of TurboQuant, the two-stage vector quantization algorithm from [Zandieh et al. (ICLR 2026)](https://arxiv.org/abs/2504.19874).
+First pip-installable implementation of TurboQuant — the two-stage vector quantizer from [Zandieh et al. (ICLR 2026)](https://arxiv.org/abs/2504.19874). Compresses KV caches, quantizes weights, and does it all natively on Metal via MLX. No calibration. No fine-tuning. Just math that works.
 
-TurboQuant compresses high-dimensional vectors with near-optimal distortion by combining:
+Two stages. One idea: make vectors smaller without making them dumber.
 
-1. **PolarQuant** (Stage 1): Random rotation + Lloyd-Max scalar quantization on the resulting Beta-distributed coordinates. Uses `b-1` bits per coordinate for MSE-optimal compression.
+1. **PolarQuant** — Random rotation + Lloyd-Max scalar quantization. Takes your high-dimensional vectors, spins them into a Beta distribution, and finds the MSE-optimal codebook. `b-1` bits per coordinate. Clean.
 
-2. **QJL** (Stage 2): 1-bit Quantized Johnson-Lindenstrauss transform applied to the residual, providing an unbiased inner product estimator.
+2. **QJL** — 1-bit Quantized Johnson-Lindenstrauss on the residual. The correction term that makes inner products unbiased. One extra bit, massive accuracy recovery.
 
-## Key Results
+## What it actually does
 
-- **6x+ KV cache compression** with zero accuracy loss at 3.5 bits/channel
-- **8x speedup** in attention computation (4-bit on H100)
-- **Unbiased** inner product estimation (TurboQuant_prod)
-- **Near-optimal**: within ~2.7x of information-theoretic lower bound
-- **Data-oblivious**: no calibration or fine-tuning needed
+- **4x compression** at 4-bit, **5x+** at 3-bit on real models (Qwen 0.5B–7B)
+- **Drop-in HuggingFace cache** — swap `DynamicCache` for `TurboQuantCache`, done
+- **Weight quantization** — replace `nn.Linear` layers, never materialize full weights again
+- **Compressed-domain matmul** — compute `y = x @ W^T` directly on quantized weights. The weight matrix never comes back to life. Novel research contribution.
+- **Native MLX backend** — runs on Apple Silicon Metal, not a CPU afterthought
+- **Data-oblivious** — no calibration set, no fine-tuning pass, no begging the model to cooperate
+- **Near-optimal** — within ~2.7x of the information-theoretic lower bound. That's the floor. We're close to it.
 
-## Installation
+## Get started
 
 ```bash
-pip install -e .
+pip install -e ".[dev]"        # PyTorch backend
+pip install -e ".[dev,mlx]"    # + MLX on Apple Silicon
 ```
-
-## Quick Start
 
 ```python
 import torch
 from turboquant import TurboQuant, TurboQuantKVCache
 
-# Basic vector quantization
-d, bits = 128, 3
-tq = TurboQuant(d=d, bits=bits)
+# Compress vectors
+tq = TurboQuant(d=128, bits=3)
+encoded = tq.encode(torch.randn(100, 128))
+x_hat = tq.decode(encoded)
 
-x = torch.randn(100, d)
-encoded = tq.encode(x)
-x_hat = tq.decode(encoded)  # MSE-optimal reconstruction
-
-# Unbiased inner product estimation
-queries = torch.randn(10, d)
+# Estimate inner products without decompressing
 scores = tq.estimate_inner_product(queries, encoded)
 
-# KV cache for transformer attention
-cache = TurboQuantKVCache(head_dim=128, n_kv_heads=8, key_bits=3)
-cache.update(key_states, value_states, layer_idx=0)
-output = cache.attend(query_states, layer_idx=0)
+# Drop into HuggingFace generation
+from turboquant.hf_cache import TurboQuantCache
+cache = TurboQuantCache(model.config, key_bits=4)
+output = model.generate(**inputs, past_key_values=cache)
+```
+
+## MLX (Apple Silicon)
+
+```python
+from turboquant.mlx_backend import TurboQuant as TurboQuantMLX
+from turboquant.mlx_quantize import quantize_model, TurboQuantLinear
+
+# Weight quantization on MLX models
+quantize_model(model, bits=4)
+
+# Or go full send — compressed-domain forward pass
+quantize_model(model, bits=4, compressed_forward=True)
+# ^ never builds the full weight matrix. Just vibes and math.
 ```
 
 ## Architecture
 
 ```
 turboquant/
-  lloyd_max.py    # Lloyd-Max quantizer for Beta distribution (Eq. 4)
-  polar_quant.py  # PolarQuant: random rotation + scalar quantization (Algorithm 1)
-  qjl.py          # QJL: 1-bit JL transform (Definition 1)
-  turboquant.py   # TurboQuant: two-stage PolarQuant + QJL (Algorithm 2)
-  kv_cache.py     # KV cache integration for LLM attention
+  lloyd_max.py      # Lloyd-Max quantizer for Beta distribution
+  polar_quant.py    # PolarQuant: rotation + scalar quantization
+  qjl.py            # QJL: 1-bit JL transform
+  turboquant.py     # Two-stage: PolarQuant + QJL
+  kv_cache.py       # KV cache for transformer attention
+  hf_cache.py       # HuggingFace DynamicCache drop-in
+  mlx_backend.py    # Native MLX/Metal implementation
+  mlx_quantize.py   # MLX weight quantization + nn.Linear replacement
+  weight_quant.py   # PyTorch weight quantization
 ```
 
-## Algorithm Overview
-
-From the paper:
-
-**Algorithm 1 (TurboQuant_mse):**
-1. Generate random rotation matrix Pi via QR decomposition
-2. Construct codebook by solving continuous 1-D k-means (Lloyd-Max) on Beta distribution
-3. Quantize: `y = Pi * x`, then `idx_j = argmin |y_j - c_k|`
-4. Dequantize: `x_hat = Pi^T * [c_{idx_1}, ..., c_{idx_d}]`
-
-**Algorithm 2 (TurboQuant_prod):**
-1. Apply TurboQuant_mse with bit-width `b-1`
-2. Compute residual `r = x - DeQuant_mse(idx)`
-3. Apply QJL: `qjl = sign(S * r)`, store `||r||`
-4. Dequantize: `x_hat = x_mse + sqrt(pi/2)/d * ||r|| * S^T * qjl`
-
-## Running Tests
+## Tests
 
 ```bash
-pip install -e ".[dev]"
-pytest tests/ -v
+# Offline suite (fast, no model downloads)
+pytest tests/test_turboquant.py tests/test_qa_comprehensive.py tests/test_extensions.py tests/test_weight_quant.py -v
+
+# MLX backend
+pytest tests/test_mlx_backend.py -v
+
+# End-to-end with real models (slow, downloads Qwen)
+pytest tests/test_e2e_real_model.py -v -s
+
+# The demo
+python examples/mlx_demo.py
 ```
 
-## Running Demo
+## How it works (for the curious)
 
-```bash
-python examples/demo.py
-```
+**Stage 1 — PolarQuant (Algorithm 1):**
+1. Generate random orthogonal matrix via QR
+2. Build codebook by solving continuous 1-D k-means on the Beta distribution
+3. Rotate vector, quantize each coordinate to nearest centroid
+4. Dequantize: inverse rotation on the codebook values
+
+**Stage 2 — TurboQuant (Algorithm 2):**
+1. Run PolarQuant at `b-1` bits
+2. Compute residual (what PolarQuant missed)
+3. Apply QJL: random projection → sign bits. Store residual norm.
+4. Reconstruct: PolarQuant output + scaled sign-corrected projection
+
+The key insight: Stage 2 costs exactly 1 bit per coordinate but makes inner product estimation unbiased. That's the engine that makes attention work at low bit-widths.
 
 ## References
 
-- Zandieh, Daliri, Hadian, Mirrokni. "TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate", ICLR 2026. [arXiv:2504.19874](https://arxiv.org/abs/2504.19874)
-- Zandieh, Daliri, Han. "QJL: 1-Bit Quantized JL Transform for KV Cache Quantization with Zero Overhead", AAAI 2025. [arXiv:2406.03482](https://arxiv.org/abs/2406.03482)
-- Han, Kacham, Karbasi, Mirrokni, Zandieh. "PolarQuant: Quantizing KV Caches with Polar Transformation", AISTATS 2026. [arXiv:2502.02617](https://arxiv.org/abs/2502.02617)
+- Zandieh, Daliri, Hadian, Mirrokni. *"TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate"*, ICLR 2026. [arXiv:2504.19874](https://arxiv.org/abs/2504.19874)
+- Zandieh, Daliri, Han. *"QJL: 1-Bit Quantized JL Transform for KV Cache Quantization with Zero Overhead"*, AAAI 2025. [arXiv:2406.03482](https://arxiv.org/abs/2406.03482)
+- Han, Kacham, Karbasi, Mirrokni, Zandieh. *"PolarQuant: Quantizing KV Caches with Polar Transformation"*, AISTATS 2026. [arXiv:2502.02617](https://arxiv.org/abs/2502.02617)
