@@ -117,15 +117,18 @@ class LloydMaxQuantizer:
 # ===================================================================
 
 def generate_random_rotation(d: int, seed: int = 42) -> mx.array:
-    """Generate random orthogonal matrix via QR decomposition."""
-    key = mx.random.key(seed)
-    G = mx.random.normal(shape=(d, d), key=key)
-    Q, R = mx.linalg.qr(G)
+    """Generate random orthogonal matrix via QR decomposition.
+
+    Uses numpy for QR (MLX doesn't support QR on Metal GPU),
+    then converts to MLX array. This only runs once at init time.
+    """
+    rng = np.random.RandomState(seed)
+    G = rng.randn(d, d).astype(np.float32)
+    Q, R = np.linalg.qr(G)
     # Ensure proper rotation (det = +1)
-    diag_sign = mx.sign(mx.diag(R))
+    diag_sign = np.sign(np.diag(R))
     Q = Q * diag_sign
-    mx.eval(Q)
-    return Q
+    return mx.array(Q)
 
 
 class PolarQuant:
