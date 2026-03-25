@@ -24,6 +24,20 @@ try:
 except ImportError:
     TurboQuantCache = None
 
+# MLX backend (optional, requires mlx — Apple Silicon only)
+try:
+    from turboquant import mlx_backend as mlx
+    from turboquant.mlx_quantize import (
+        TurboQuantLinear as MLXTurboQuantLinear,
+        quantize_model as mlx_quantize_model,
+        model_memory_report as mlx_memory_report,
+    )
+except ImportError:
+    mlx = None
+    MLXTurboQuantLinear = None
+    mlx_quantize_model = None
+    mlx_memory_report = None
+
 __version__ = "0.1.0"
 __all__ = [
     "LloydMaxQuantizer",
@@ -38,4 +52,9 @@ __all__ = [
     "save_quantized",
     "load_quantized",
     "model_memory_report",
+    # MLX backend
+    "mlx",
+    "MLXTurboQuantLinear",
+    "mlx_quantize_model",
+    "mlx_memory_report",
 ]
