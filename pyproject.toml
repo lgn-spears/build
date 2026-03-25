@@ -5,10 +5,35 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "turboquant"
 version = "0.1.0"
-description = "TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate"
+description = "TurboQuant: Near-optimal KV cache compression for LLMs via two-stage vector quantization"
 readme = "README.md"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 requires-python = ">=3.9"
+authors = [
+    {name = "Logan Spears"},
+]
+keywords = [
+    "quantization",
+    "vector-quantization",
+    "kv-cache",
+    "llm",
+    "transformers",
+    "compression",
+    "attention",
+    "inference",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "torch>=2.0",
     "numpy>=1.24",
@@ -18,6 +43,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "matplotlib>=3.7"]
 llm = ["transformers>=4.36", "accelerate>=0.25"]
+
+[project.urls]
+Homepage = "https://github.com/lgn-spears/build"
+Repository = "https://github.com/lgn-spears/build"
+Issues = "https://github.com/lgn-spears/build/issues"
 
 [tool.setuptools.packages.find]
 include = ["turboquant*"]
