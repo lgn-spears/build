@@ -322,8 +322,14 @@ def _find_linear_modules(
             )
 
 
-def _walk_modules(module, prefix=""):
+def _walk_modules(module, prefix="", _visited=None):
     """Walk all named submodules in an MLX model."""
+    if _visited is None:
+        _visited = set()
+    mid = id(module)
+    if mid in _visited:
+        return
+    _visited.add(mid)
     # MLX modules store children as attributes
     for name in dir(module):
         if name.startswith("_"):
@@ -333,21 +339,27 @@ def _walk_modules(module, prefix=""):
         except Exception:
             continue
         if isinstance(child, nn.Module):
+            if id(child) in _visited:
+                continue
             full_name = f"{prefix}.{name}" if prefix else name
             yield full_name, child
-            yield from _walk_modules(child, full_name)
+            yield from _walk_modules(child, full_name, _visited)
         elif isinstance(child, (list, tuple)):
             for i, item in enumerate(child):
                 if isinstance(item, nn.Module):
+                    if id(item) in _visited:
+                        continue
                     full_name = f"{prefix}.{name}.{i}" if prefix else f"{name}.{i}"
                     yield full_name, item
-                    yield from _walk_modules(item, full_name)
+                    yield from _walk_modules(item, full_name, _visited)
         elif isinstance(child, dict):
             for k, item in child.items():
                 if isinstance(item, nn.Module):
+                    if id(item) in _visited:
+                        continue
                     full_name = f"{prefix}.{name}.{k}" if prefix else f"{name}.{k}"
                     yield full_name, item
-                    yield from _walk_modules(item, full_name)
+                    yield from _walk_modules(item, full_name, _visited)
 
 
 def _set_nested_attr(module, path: str, value):

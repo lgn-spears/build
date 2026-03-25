@@ -251,17 +251,22 @@ class QJL:
         # Raw dot product of projected query with sign bits
         if q_proj.ndim == 1 and signs.ndim == 2:
             raw_scores = q_proj @ signs.T
-        elif q_proj.ndim == signs.ndim:
+        elif q_proj.ndim == signs.ndim and q_proj.shape[-2] == signs.shape[-2]:
+            # Same batch size — element-wise multiply and sum
             raw_scores = mx.sum(q_proj * signs, axis=-1, keepdims=True)
         else:
+            # Different batch sizes or ndims — use matmul
             raw_scores = mx.matmul(q_proj, mx.swapaxes(signs, -2, -1))
 
         # Apply the unbiased scaling factor: √(π/2) / m
         scale = math.sqrt(math.pi / 2.0) / self.m
 
         scores = raw_scores * scale
-        # Scale by key norms
-        if key_norms.ndim < scores.ndim:
+        # Scale by key norms — ensure broadcastable shape
+        # key_norms is (n, 1), scores may be (batch, n) from matmul
+        if scores.ndim >= 2 and key_norms.shape[-1] == 1 and key_norms.shape[-2] == scores.shape[-1]:
+            key_norms = mx.swapaxes(key_norms, -2, -1)  # (n, 1) -> (1, n)
+        elif key_norms.ndim < scores.ndim:
             key_norms = mx.swapaxes(key_norms, -2, -1)
         scores = scores * key_norms
 
