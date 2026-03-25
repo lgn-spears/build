@@ -101,6 +101,7 @@ class TestQJLMLX:
         m = 256  # more projections for tighter estimate
         qjl = QJL(d=d, m=m, seed=42)
 
+        mx.random.seed(99)
         x = mx.random.normal(shape=(d,))
         y = mx.random.normal(shape=(1, d))
         y_norm = mx.linalg.norm(y, axis=-1, keepdims=True)

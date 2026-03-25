@@ -269,9 +269,12 @@ class TurboQuantLayer:
         """Total number of cached tokens."""
         return self._seen_tokens
 
-    def get_mask_sizes(self, query_length: int) -> Tuple[int, int]:
-        """Get KV length and offset for mask computation."""
-        return self._seen_tokens, 0
+    def get_mask_sizes(self, cache_position: torch.Tensor) -> Tuple[int, int]:
+        """Return the length and offset of the cache, used to generate the mask."""
+        kv_offset = 0
+        query_length = cache_position.shape[0]
+        kv_length = self.get_seq_length() + query_length
+        return kv_length, kv_offset
 
     def get_max_cache_shape(self) -> int:
         """No maximum — cache grows dynamically."""
@@ -462,12 +465,12 @@ class TurboQuantCache:
         """No maximum — grows dynamically."""
         return -1
 
-    def get_mask_sizes(self, query_length: int,
+    def get_mask_sizes(self, cache_position: torch.Tensor,
                        layer_idx: int = 0) -> Tuple[int, int]:
         """Get mask dimensions for attention."""
-        if layer_idx < len(self.layers):
-            return self.layers[layer_idx].get_mask_sizes(query_length)
-        return 0, 0
+        if layer_idx >= len(self.layers):
+            return cache_position.shape[0], 0
+        return self.layers[layer_idx].get_mask_sizes(cache_position)
 
     def reset(self) -> None:
         """Clear all layers."""
