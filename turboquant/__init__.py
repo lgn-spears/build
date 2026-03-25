@@ -14,6 +14,12 @@ from turboquant.qjl import QJL
 from turboquant.turboquant import TurboQuant
 from turboquant.kv_cache import TurboQuantKVCache
 
+# HuggingFace integration (optional, requires transformers)
+try:
+    from turboquant.hf_cache import TurboQuantCache
+except ImportError:
+    TurboQuantCache = None
+
 __version__ = "0.1.0"
 __all__ = [
     "LloydMaxQuantizer",
@@ -22,4 +28,5 @@ __all__ = [
     "QJL",
     "TurboQuant",
     "TurboQuantKVCache",
+    "TurboQuantCache",
 ]
