@@ -1,305 +1,470 @@
-"""End-to-end tests with a real HuggingFace model (Qwen2.5-0.5B).
+"""End-to-end tests with real HuggingFace Qwen models at multiple scales.
 
-These tests download and run a real LLM to validate:
-  1. Weight quantization preserves model coherence
-  2. KV cache compression works with real generation
-  3. Compressed-domain matmul (Phase 2) produces valid output
-  4. Memory savings are real and measurable
+Tests TurboQuant weight quantization, KV cache compression, and full-stack
+(quantized weights + quantized KV cache) across three model sizes:
 
-Requires: ~2 GB disk for model download, ~3 GB RAM for inference.
-Model: Qwen/Qwen2.5-0.5B (500M params, smallest modern instruction LLM)
+  - Qwen2.5-0.5B  (500M params, ~1 GB)  — fast smoke test
+  - Qwen2.5-3B    (3B params,   ~6 GB)  — mid-range validation
+  - Qwen2.5-7B    (7B params,  ~14 GB)  — real-world stress test
+
+Each model auto-skips if insufficient RAM or no network access.
+Run: python -m pytest tests/test_e2e_real_model.py -v -s
 """
 
 import pytest
 import torch
 import gc
-import sys
+import math
 
 
-# Skip all tests if transformers not available, insufficient memory, or no network
-def _check_resources():
-    try:
-        import transformers
-    except ImportError:
-        return False, "transformers not installed"
-    import psutil
-    available_gb = psutil.virtual_memory().available / (1024 ** 3)
-    if available_gb < 2.0:
-        return False, f"Need 2 GB free RAM, have {available_gb:.1f} GB"
-    # Check if we can reach HuggingFace Hub
+# ---------------------------------------------------------------------------
+# Model configurations with RAM requirements
+# ---------------------------------------------------------------------------
+
+MODEL_CONFIGS = [
+    {
+        "id": "Qwen/Qwen2.5-0.5B",
+        "label": "0.5B",
+        "min_ram_gb": 3,
+        "fp16_gb": 1.0,
+    },
+    {
+        "id": "Qwen/Qwen2.5-3B",
+        "label": "3B",
+        "min_ram_gb": 10,
+        "fp16_gb": 6.0,
+    },
+    {
+        "id": "Qwen/Qwen2.5-7B",
+        "label": "7B",
+        "min_ram_gb": 20,
+        "fp16_gb": 14.0,
+    },
+]
+
+
+def _has_network():
+    """Check if HuggingFace Hub is reachable."""
     try:
         import urllib.request
         urllib.request.urlopen("https://huggingface.co", timeout=5)
+        return True
     except Exception:
-        return False, "Cannot reach HuggingFace Hub (no network access)"
+        return False
+
+
+def _has_transformers():
+    try:
+        import transformers  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def _available_ram_gb():
+    import psutil
+    return psutil.virtual_memory().available / (1024 ** 3)
+
+
+def _can_run(config):
+    """Check if a given model config can run in this environment."""
+    if not _has_transformers():
+        return False, "transformers not installed"
+    if not _has_network():
+        return False, "Cannot reach HuggingFace Hub"
+    avail = _available_ram_gb()
+    if avail < config["min_ram_gb"]:
+        return False, f"Need {config['min_ram_gb']} GB RAM, have {avail:.1f} GB"
     return True, "OK"
 
 
-_resources_ok, _skip_reason = _check_resources()
-requires_resources = pytest.mark.skipif(
-    not _resources_ok,
-    reason=_skip_reason
-)
+# ---------------------------------------------------------------------------
+# Fixtures — one per model size, module-scoped for efficiency
+# ---------------------------------------------------------------------------
 
-MODEL_NAME = "Qwen/Qwen2.5-0.5B"
+@pytest.fixture(scope="module")
+def model_0_5b():
+    """Load Qwen2.5-0.5B once for all tests that need it."""
+    cfg = MODEL_CONFIGS[0]
+    ok, reason = _can_run(cfg)
+    if not ok:
+        pytest.skip(reason)
+    return _load_model(cfg["id"])
 
 
 @pytest.fixture(scope="module")
-def model_and_tokenizer():
-    """Load model and tokenizer once for all tests in this module."""
+def model_3b():
+    """Load Qwen2.5-3B once for all tests that need it."""
+    cfg = MODEL_CONFIGS[1]
+    ok, reason = _can_run(cfg)
+    if not ok:
+        pytest.skip(reason)
+    return _load_model(cfg["id"])
+
+
+@pytest.fixture(scope="module")
+def model_7b():
+    """Load Qwen2.5-7B once for all tests that need it."""
+    cfg = MODEL_CONFIGS[2]
+    ok, reason = _can_run(cfg)
+    if not ok:
+        pytest.skip(reason)
+    return _load_model(cfg["id"])
+
+
+def _load_model(model_name):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
+        model_name,
         torch_dtype=torch.float32,
         device_map="cpu",
         trust_remote_code=True,
     )
     model.eval()
-    yield model, tokenizer
-
-    # Cleanup
-    del model, tokenizer
-    gc.collect()
+    return model, tokenizer, model_name
 
 
-@requires_resources
-class TestWeightQuantizationE2E:
+def _fresh_model(model_name):
+    """Load a separate copy of a model (for tests that mutate it)."""
+    from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    def test_quantize_and_generate(self, model_and_tokenizer):
-        """Quantize model weights and verify it still generates coherent text."""
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.float32,
+        device_map="cpu",
+        trust_remote_code=True,
+    )
+    model.eval()
+    return model, tokenizer
+
+
+# ===================================================================
+#  WEIGHT QUANTIZATION — all model sizes
+# ===================================================================
+
+class TestWeightQuantization:
+    """Quantize model weights and verify generation still works."""
+
+    # --- 0.5B (fast) ---
+
+    def test_quantize_and_generate_0_5b(self, model_0_5b):
+        model_name = model_0_5b[2]
+        self._quantize_and_generate(model_name, bits=4)
+
+    def test_memory_reduction_0_5b(self, model_0_5b):
+        model_name = model_0_5b[2]
+        self._memory_reduction(model_name, bits=3)
+
+    def test_compressed_forward_0_5b(self, model_0_5b):
+        model_name = model_0_5b[2]
+        self._compressed_forward(model_name, bits=4)
+
+    # --- 3B (medium) ---
+
+    def test_quantize_and_generate_3b(self, model_3b):
+        model_name = model_3b[2]
+        self._quantize_and_generate(model_name, bits=4)
+
+    def test_memory_reduction_3b(self, model_3b):
+        model_name = model_3b[2]
+        self._memory_reduction(model_name, bits=3)
+
+    def test_compressed_forward_3b(self, model_3b):
+        model_name = model_3b[2]
+        self._compressed_forward(model_name, bits=4)
+
+    # --- 7B (stress test) ---
+
+    def test_quantize_and_generate_7b(self, model_7b):
+        model_name = model_7b[2]
+        self._quantize_and_generate(model_name, bits=4)
+
+    def test_memory_reduction_7b(self, model_7b):
+        model_name = model_7b[2]
+        self._memory_reduction(model_name, bits=3)
+
+    def test_compressed_forward_7b(self, model_7b):
+        model_name = model_7b[2]
+        self._compressed_forward(model_name, bits=4)
+
+    # --- Shared implementations ---
+
+    def _quantize_and_generate(self, model_name, bits):
         from turboquant.weight_quant import quantize_model
 
-        # Load a fresh copy to quantize (don't modify the shared fixture)
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.float32,
-            device_map="cpu",
-            trust_remote_code=True,
-        )
-        model.eval()
+        model, tokenizer = _fresh_model(model_name)
 
-        # Generate reference output BEFORE quantization
+        # Reference output before quantization
         prompt = "The capital of France is"
         inputs = tokenizer(prompt, return_tensors="pt")
         with torch.no_grad():
             ref_output = model.generate(
-                **inputs, max_new_tokens=20, do_sample=False,
-                temperature=1.0,
+                **inputs, max_new_tokens=20, do_sample=False, temperature=1.0,
             )
         ref_text = tokenizer.decode(ref_output[0], skip_special_tokens=True)
 
-        # Quantize the model
-        quantize_model(model, bits=4)
+        # Quantize and generate
+        quantize_model(model, bits=bits)
 
-        # Generate with quantized model
         with torch.no_grad():
             quant_output = model.generate(
-                **inputs, max_new_tokens=20, do_sample=False,
-                temperature=1.0,
+                **inputs, max_new_tokens=20, do_sample=False, temperature=1.0,
             )
         quant_text = tokenizer.decode(quant_output[0], skip_special_tokens=True)
 
-        # The quantized model should produce text (not garbage)
         assert len(quant_text) > len(prompt), \
-            f"Quantized model produced no new text: '{quant_text}'"
-
-        # Should contain recognizable words (not just random tokens)
-        assert any(word in quant_text.lower() for word in
+            f"[{model_name}] Quantized model produced no new text: '{quant_text}'"
+        assert any(w in quant_text.lower() for w in
                    ["paris", "france", "city", "capital", "the", "is", "a"]), \
-            f"Quantized output looks like garbage: '{quant_text}'"
+            f"[{model_name}] Output looks like garbage: '{quant_text}'"
 
-        print(f"\n  Reference:  {ref_text}")
+        print(f"\n  [{model_name} @ {bits}-bit]")
+        print(f"  Reference:  {ref_text}")
         print(f"  Quantized:  {quant_text}")
 
         del model
         gc.collect()
 
-    def test_memory_reduction(self, model_and_tokenizer):
-        """Verify that quantization actually reduces memory footprint."""
+    def _memory_reduction(self, model_name, bits):
         from transformers import AutoModelForCausalLM
         from turboquant.weight_quant import quantize_model, model_memory_report
 
         model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.float32,
-            device_map="cpu",
-            trust_remote_code=True,
+            model_name, torch_dtype=torch.float32,
+            device_map="cpu", trust_remote_code=True,
         )
-
-        quantize_model(model, bits=3)
+        quantize_model(model, bits=bits)
         report = model_memory_report(model)
 
-        print(f"\n  Quantized layers:  {report['num_quantized_layers']}")
+        print(f"\n  [{model_name} @ {bits}-bit]")
+        print(f"  Quantized layers:  {report['num_quantized_layers']}")
         print(f"  FP16 equivalent:   {report['total_fp16_mb']:.1f} MB")
         print(f"  Compressed:        {report['total_compressed_mb']:.1f} MB")
         print(f"  Compression ratio: {report['compression_ratio']:.1f}x")
 
         assert report["num_quantized_layers"] > 0
         assert report["compression_ratio"] > 2.0, \
-            f"Expected >2x compression, got {report['compression_ratio']:.1f}x"
+            f"[{model_name}] Expected >2x compression, got {report['compression_ratio']:.1f}x"
 
         del model
         gc.collect()
 
-    def test_compressed_forward_generates(self, model_and_tokenizer):
-        """Phase 2 compressed-domain matmul should produce valid output."""
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+    def _compressed_forward(self, model_name, bits):
         from turboquant.weight_quant import quantize_model
 
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.float32,
-            device_map="cpu",
-            trust_remote_code=True,
-        )
-        model.eval()
-
-        # Quantize with compressed forward (Phase 2)
-        quantize_model(model, bits=4, compressed_forward=True)
+        model, tokenizer = _fresh_model(model_name)
+        quantize_model(model, bits=bits, compressed_forward=True)
 
         prompt = "1 + 1 ="
         inputs = tokenizer(prompt, return_tensors="pt")
         with torch.no_grad():
             output = model.generate(
-                **inputs, max_new_tokens=10, do_sample=False,
-                temperature=1.0,
+                **inputs, max_new_tokens=10, do_sample=False, temperature=1.0,
             )
         text = tokenizer.decode(output[0], skip_special_tokens=True)
 
         assert len(text) > len(prompt), \
-            f"Compressed forward produced no output: '{text}'"
-        print(f"\n  Compressed forward output: {text}")
+            f"[{model_name}] Compressed forward produced no output: '{text}'"
+        print(f"\n  [{model_name} @ {bits}-bit compressed forward]: {text}")
 
         del model
         gc.collect()
 
 
-@requires_resources
-class TestKVCacheE2E:
+# ===================================================================
+#  KV CACHE — uses shared fixture (doesn't mutate model)
+# ===================================================================
 
-    def test_turboquant_cache_with_generation(self, model_and_tokenizer):
-        """TurboQuantCache should work as drop-in for model.generate()."""
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+class TestKVCache:
+    """TurboQuantCache as drop-in for HuggingFace generate()."""
+
+    # --- 0.5B ---
+
+    def test_cache_generation_0_5b(self, model_0_5b):
+        self._cache_generation(*model_0_5b)
+
+    def test_cache_vs_baseline_0_5b(self, model_0_5b):
+        self._cache_vs_baseline(*model_0_5b)
+
+    # --- 3B ---
+
+    def test_cache_generation_3b(self, model_3b):
+        self._cache_generation(*model_3b)
+
+    def test_cache_vs_baseline_3b(self, model_3b):
+        self._cache_vs_baseline(*model_3b)
+
+    # --- 7B ---
+
+    def test_cache_generation_7b(self, model_7b):
+        self._cache_generation(*model_7b)
+
+    def test_cache_vs_baseline_7b(self, model_7b):
+        self._cache_vs_baseline(*model_7b)
+
+    # --- Shared implementations ---
+
+    def _cache_generation(self, model, tokenizer, model_name):
         from turboquant.hf_cache import TurboQuantCache
-
-        model, tokenizer = model_and_tokenizer
 
         prompt = "Write a short poem about the moon:"
         inputs = tokenizer(prompt, return_tensors="pt")
 
-        # Generate with TurboQuant KV cache
         cache = TurboQuantCache(model.config, key_bits=4)
-
         with torch.no_grad():
             output = model.generate(
-                **inputs,
-                past_key_values=cache,
-                max_new_tokens=30,
-                do_sample=False,
-                temperature=1.0,
+                **inputs, past_key_values=cache,
+                max_new_tokens=30, do_sample=False, temperature=1.0,
             )
         text = tokenizer.decode(output[0], skip_special_tokens=True)
 
         assert len(text) > len(prompt), \
-            f"TurboQuantCache generation produced no output: '{text}'"
+            f"[{model_name}] Cache generation produced no output: '{text}'"
 
-        # Should have cached tokens
         seq_len = cache.get_seq_length(layer_idx=0)
-        assert seq_len > 0, "Cache should have stored tokens"
+        assert seq_len > 0
 
-        print(f"\n  TurboQuantCache output ({seq_len} cached tokens):")
-        print(f"  {text}")
+        print(f"\n  [{model_name}] TurboQuantCache ({seq_len} tokens): {text}")
 
-    def test_cache_vs_no_cache_similarity(self, model_and_tokenizer):
-        """Output with TurboQuantCache should be similar to standard cache."""
+    def _cache_vs_baseline(self, model, tokenizer, model_name):
         from turboquant.hf_cache import TurboQuantCache
 
-        model, tokenizer = model_and_tokenizer
         prompt = "The meaning of life is"
         inputs = tokenizer(prompt, return_tensors="pt")
 
-        # Reference: no custom cache (uses DynamicCache internally)
+        # Baseline (standard DynamicCache)
         with torch.no_grad():
             ref_output = model.generate(
-                **inputs, max_new_tokens=20, do_sample=False,
-                temperature=1.0,
+                **inputs, max_new_tokens=20, do_sample=False, temperature=1.0,
             )
         ref_text = tokenizer.decode(ref_output[0], skip_special_tokens=True)
 
-        # With TurboQuant cache (4-bit, high quality)
+        # TurboQuant cache
         cache = TurboQuantCache(model.config, key_bits=4)
         with torch.no_grad():
             tq_output = model.generate(
-                **inputs,
-                past_key_values=cache,
-                max_new_tokens=20,
-                do_sample=False,
-                temperature=1.0,
+                **inputs, past_key_values=cache,
+                max_new_tokens=20, do_sample=False, temperature=1.0,
             )
         tq_text = tokenizer.decode(tq_output[0], skip_special_tokens=True)
 
-        print(f"\n  Reference:     {ref_text}")
-        print(f"  TurboQuant:    {tq_text}")
+        print(f"\n  [{model_name}]")
+        print(f"  Baseline:     {ref_text}")
+        print(f"  TurboQuant:   {tq_text}")
 
-        # Both should produce real text (not garbage)
         assert len(tq_text) > len(prompt)
-        # They may diverge after a few tokens (quantization noise), but
-        # both should be coherent English
-        assert any(word in tq_text.lower() for word in
+        assert any(w in tq_text.lower() for w in
                    ["life", "meaning", "is", "the", "to", "a", "that"]), \
-            f"TurboQuant output looks incoherent: '{tq_text}'"
+            f"[{model_name}] TurboQuant output incoherent: '{tq_text}'"
 
 
-@requires_resources
-class TestFullStackE2E:
+# ===================================================================
+#  FULL STACK — quantized weights + quantized KV cache
+# ===================================================================
 
-    def test_weight_quant_plus_kv_cache(self, model_and_tokenizer):
-        """The holy grail: quantized weights + quantized KV cache together."""
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+class TestFullStack:
+    """The holy grail: compressed weights AND compressed KV cache together."""
+
+    def test_full_stack_0_5b(self, model_0_5b):
+        self._full_stack(model_0_5b[2], weight_bits=4, kv_bits=3)
+
+    def test_full_stack_3b(self, model_3b):
+        self._full_stack(model_3b[2], weight_bits=4, kv_bits=3)
+
+    def test_full_stack_7b(self, model_7b):
+        self._full_stack(model_7b[2], weight_bits=4, kv_bits=3)
+
+    def _full_stack(self, model_name, weight_bits, kv_bits):
         from turboquant.weight_quant import quantize_model
         from turboquant.hf_cache import TurboQuantCache
 
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.float32,
-            device_map="cpu",
-            trust_remote_code=True,
-        )
-        model.eval()
+        model, tokenizer = _fresh_model(model_name)
 
-        # Quantize weights (Phase 1: dequantize mode)
-        quantize_model(model, bits=4)
+        # Quantize weights
+        quantize_model(model, bits=weight_bits)
 
-        # Use TurboQuant KV cache
-        cache = TurboQuantCache(model.config, key_bits=3)
+        # Quantize KV cache
+        cache = TurboQuantCache(model.config, key_bits=kv_bits)
 
         prompt = "Hello, my name is"
         inputs = tokenizer(prompt, return_tensors="pt")
 
         with torch.no_grad():
             output = model.generate(
-                **inputs,
-                past_key_values=cache,
-                max_new_tokens=20,
-                do_sample=False,
-                temperature=1.0,
+                **inputs, past_key_values=cache,
+                max_new_tokens=20, do_sample=False, temperature=1.0,
             )
         text = tokenizer.decode(output[0], skip_special_tokens=True)
 
         assert len(text) > len(prompt), \
-            f"Full-stack quantized model produced no output: '{text}'"
+            f"[{model_name}] Full-stack produced no output: '{text}'"
 
-        print(f"\n  Full-stack (4-bit weights + 3-bit KV cache):")
+        print(f"\n  [{model_name}] {weight_bits}-bit weights + {kv_bits}-bit KV cache:")
         print(f"  {text}")
 
         del model
         gc.collect()
+
+
+# ===================================================================
+#  CROSS-BIT-RATE — test quality across bit budgets on smallest model
+# ===================================================================
+
+class TestBitRateSweep:
+    """Test multiple bit rates to show quality vs compression tradeoff."""
+
+    @pytest.mark.parametrize("bits", [2, 3, 4, 5])
+    def test_weight_quant_bit_sweep(self, model_0_5b, bits):
+        """Quantize at different bit rates and verify all produce text."""
+        from turboquant.weight_quant import quantize_model, model_memory_report
+
+        model_name = model_0_5b[2]
+        model, tokenizer = _fresh_model(model_name)
+
+        quantize_model(model, bits=bits)
+        report = model_memory_report(model)
+
+        prompt = "The sky is"
+        inputs = tokenizer(prompt, return_tensors="pt")
+        with torch.no_grad():
+            output = model.generate(
+                **inputs, max_new_tokens=15, do_sample=False, temperature=1.0,
+            )
+        text = tokenizer.decode(output[0], skip_special_tokens=True)
+
+        assert len(text) > len(prompt), \
+            f"[{bits}-bit] No output: '{text}'"
+
+        print(f"\n  [{bits}-bit] {report['compression_ratio']:.1f}x compression: {text}")
+
+        del model
+        gc.collect()
+
+    @pytest.mark.parametrize("kv_bits", [2, 3, 4])
+    def test_kv_cache_bit_sweep(self, model_0_5b, kv_bits):
+        """KV cache at different bit rates."""
+        from turboquant.hf_cache import TurboQuantCache
+
+        model, tokenizer, model_name = model_0_5b
+
+        prompt = "Once upon a time"
+        inputs = tokenizer(prompt, return_tensors="pt")
+
+        cache = TurboQuantCache(model.config, key_bits=kv_bits)
+        with torch.no_grad():
+            output = model.generate(
+                **inputs, past_key_values=cache,
+                max_new_tokens=15, do_sample=False, temperature=1.0,
+            )
+        text = tokenizer.decode(output[0], skip_special_tokens=True)
+
+        assert len(text) > len(prompt), \
+            f"[KV {kv_bits}-bit] No output: '{text}'"
+
+        print(f"\n  [KV {kv_bits}-bit]: {text}")
 
 
 if __name__ == "__main__":
