@@ -13,6 +13,10 @@ from turboquant.polar_quant import PolarQuant
 from turboquant.qjl import QJL
 from turboquant.turboquant import TurboQuant
 from turboquant.kv_cache import TurboQuantKVCache
+from turboquant.weight_quant import (
+    TurboQuantLinear, quantize_model, save_quantized,
+    load_quantized, model_memory_report,
+)
 
 # HuggingFace integration (optional, requires transformers)
 try:
@@ -29,4 +33,9 @@ __all__ = [
     "TurboQuant",
     "TurboQuantKVCache",
     "TurboQuantCache",
+    "TurboQuantLinear",
+    "quantize_model",
+    "save_quantized",
+    "load_quantized",
+    "model_memory_report",
 ]
