@@ -94,22 +94,51 @@ def model_0_5b():
 
 @pytest.fixture(scope="module")
 def model_3b():
-    """Load Qwen2.5-3B once for all tests that need it."""
+    """Load Qwen2.5-3B for tests that need the actual model (KV cache, etc)."""
     cfg = MODEL_CONFIGS[1]
     ok, reason = _can_run(cfg)
     if not ok:
         pytest.skip(reason)
-    return _load_model(cfg["id"])
+    result = _load_model(cfg["id"])
+    yield result
+    # Free model memory after all tests using this fixture are done
+    del result
+    gc.collect()
 
 
 @pytest.fixture(scope="module")
 def model_7b():
-    """Load Qwen2.5-7B once for all tests that need it."""
+    """Load Qwen2.5-7B for tests that need the actual model (KV cache, etc)."""
     cfg = MODEL_CONFIGS[2]
     ok, reason = _can_run(cfg)
     if not ok:
         pytest.skip(reason)
-    return _load_model(cfg["id"])
+    result = _load_model(cfg["id"])
+    yield result
+    del result
+    gc.collect()
+
+
+# Lightweight fixtures that only check availability and return the model name.
+# Used by TestWeightQuantization which loads its own copies via _fresh_model.
+@pytest.fixture(scope="module")
+def model_name_3b():
+    """Return 3B model name after checking availability (doesn't load model)."""
+    cfg = MODEL_CONFIGS[1]
+    ok, reason = _can_run(cfg)
+    if not ok:
+        pytest.skip(reason)
+    return cfg["id"]
+
+
+@pytest.fixture(scope="module")
+def model_name_7b():
+    """Return 7B model name after checking availability (doesn't load model)."""
+    cfg = MODEL_CONFIGS[2]
+    ok, reason = _can_run(cfg)
+    if not ok:
+        pytest.skip(reason)
+    return cfg["id"]
 
 
 def _load_model(model_name):
@@ -118,7 +147,7 @@ def _load_model(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        torch_dtype=torch.float32,
+        torch_dtype=torch.float16,
         device_map="cpu",
         trust_remote_code=True,
     )
@@ -133,7 +162,7 @@ def _fresh_model(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        torch_dtype=torch.float32,
+        torch_dtype=torch.float16,
         device_map="cpu",
         trust_remote_code=True,
     )
@@ -164,49 +193,45 @@ class TestWeightQuantization:
 
     # --- 3B (medium) ---
 
-    def test_quantize_and_generate_3b(self, model_3b):
-        model_name = model_3b[2]
-        self._quantize_and_generate(model_name, bits=4)
+    def test_quantize_and_generate_3b(self, model_name_3b):
+        self._quantize_and_generate(model_name_3b, bits=4)
 
-    def test_memory_reduction_3b(self, model_3b):
-        model_name = model_3b[2]
-        self._memory_reduction(model_name, bits=3)
+    def test_memory_reduction_3b(self, model_name_3b):
+        self._memory_reduction(model_name_3b, bits=3)
 
-    def test_compressed_forward_3b(self, model_3b):
-        model_name = model_3b[2]
-        self._compressed_forward(model_name, bits=4)
+    def test_compressed_forward_3b(self, model_name_3b):
+        self._compressed_forward(model_name_3b, bits=4)
 
     # --- 7B (stress test) ---
 
-    def test_quantize_and_generate_7b(self, model_7b):
-        model_name = model_7b[2]
-        self._quantize_and_generate(model_name, bits=4)
+    def test_quantize_and_generate_7b(self, model_name_7b):
+        self._quantize_and_generate(model_name_7b, bits=4)
 
-    def test_memory_reduction_7b(self, model_7b):
-        model_name = model_7b[2]
-        self._memory_reduction(model_name, bits=3)
+    def test_memory_reduction_7b(self, model_name_7b):
+        self._memory_reduction(model_name_7b, bits=3)
 
-    def test_compressed_forward_7b(self, model_7b):
-        model_name = model_7b[2]
-        self._compressed_forward(model_name, bits=4)
+    def test_compressed_forward_7b(self, model_name_7b):
+        self._compressed_forward(model_name_7b, bits=4)
 
     # --- Shared implementations ---
 
     def _quantize_and_generate(self, model_name, bits):
         from turboquant.weight_quant import quantize_model
 
-        model, tokenizer = _fresh_model(model_name)
-
-        # Reference output before quantization
+        # Generate reference output, then free the model to reduce peak memory
         prompt = "The capital of France is"
+        model, tokenizer = _fresh_model(model_name)
         inputs = tokenizer(prompt, return_tensors="pt")
         with torch.no_grad():
             ref_output = model.generate(
                 **inputs, max_new_tokens=20, do_sample=False, temperature=1.0,
             )
         ref_text = tokenizer.decode(ref_output[0], skip_special_tokens=True)
+        del model, ref_output
+        gc.collect()
 
-        # Quantize and generate
+        # Load fresh copy, quantize, and generate
+        model, _ = _fresh_model(model_name)
         quantize_model(model, bits=bits)
 
         with torch.no_grad():
@@ -233,7 +258,7 @@ class TestWeightQuantization:
         from turboquant.weight_quant import quantize_model, model_memory_report
 
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.float32,
+            model_name, torch_dtype=torch.float16,
             device_map="cpu", trust_remote_code=True,
         )
         quantize_model(model, bits=bits)
@@ -371,11 +396,11 @@ class TestFullStack:
     def test_full_stack_0_5b(self, model_0_5b):
         self._full_stack(model_0_5b[2], weight_bits=4, kv_bits=3)
 
-    def test_full_stack_3b(self, model_3b):
-        self._full_stack(model_3b[2], weight_bits=4, kv_bits=3)
+    def test_full_stack_3b(self, model_name_3b):
+        self._full_stack(model_name_3b, weight_bits=4, kv_bits=3)
 
-    def test_full_stack_7b(self, model_7b):
-        self._full_stack(model_7b[2], weight_bits=4, kv_bits=3)
+    def test_full_stack_7b(self, model_name_7b):
+        self._full_stack(model_name_7b, weight_bits=4, kv_bits=3)
 
     def _full_stack(self, model_name, weight_bits, kv_bits):
         from turboquant.weight_quant import quantize_model

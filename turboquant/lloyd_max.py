@@ -137,7 +137,7 @@ class LloydMaxQuantizer:
         """
         # Use searchsorted on boundaries for O(log n) quantization
         indices = torch.searchsorted(self.boundaries, x.contiguous())
-        return indices.clamp(0, self.n_levels - 1)
+        return indices.clamp(0, self.n_levels - 1).to(torch.int16)
 
     def dequantize(self, indices: torch.Tensor) -> torch.Tensor:
         """Map quantization indices back to centroid values.

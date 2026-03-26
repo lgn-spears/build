@@ -63,6 +63,7 @@ class TurboQuantLinear(nn.Module):
         compressed_forward: bool = False,
         device: Optional[torch.device] = None,
         dtype: torch.dtype = torch.float16,
+        shared_quantizer: Optional[TurboQuant] = None,
     ):
         """Initialize a TurboQuant linear layer.
 
@@ -75,6 +76,8 @@ class TurboQuantLinear(nn.Module):
                 matmul. If False (default), dequantize for standard matmul.
             device: Torch device.
             dtype: Original weight dtype for dequantization.
+            shared_quantizer: Optional pre-existing TurboQuant to reuse
+                (shares rotation matrix across layers with same dimensions).
         """
         super().__init__()
         self.in_features = in_features
@@ -83,10 +86,15 @@ class TurboQuantLinear(nn.Module):
         self.compressed_forward = compressed_forward
         self._dtype = dtype
 
-        # TurboQuant quantizer for weight rows
-        self._quantizer = TurboQuant(
-            d=in_features, bits=bits,
-            device=device or torch.device("cpu"))
+        # TurboQuant quantizer for weight rows — share across layers
+        # with the same (in_features, bits) to save memory on the (d,d)
+        # rotation matrix.
+        if shared_quantizer is not None:
+            self._quantizer = shared_quantizer
+        else:
+            self._quantizer = TurboQuant(
+                d=in_features, bits=bits,
+                device=device or torch.device("cpu"))
 
         # Compressed weight storage (populated by from_linear or load)
         # PolarQuant indices: (out_features, in_features), int
@@ -113,6 +121,7 @@ class TurboQuantLinear(nn.Module):
         linear: nn.Linear,
         bits: int = 3,
         compressed_forward: bool = False,
+        shared_quantizer: Optional[TurboQuant] = None,
     ) -> "TurboQuantLinear":
         """Convert an existing nn.Linear to TurboQuantLinear.
 
@@ -124,6 +133,7 @@ class TurboQuantLinear(nn.Module):
             linear: The nn.Linear layer to quantize.
             bits: Bits per coordinate.
             compressed_forward: Use compressed-domain matmul.
+            shared_quantizer: Optional pre-existing TurboQuant to reuse.
 
         Returns:
             A TurboQuantLinear with the same behavior but compressed weights.
@@ -140,13 +150,14 @@ class TurboQuantLinear(nn.Module):
             compressed_forward=compressed_forward,
             device=device,
             dtype=dtype,
+            shared_quantizer=shared_quantizer,
         )
 
         # Quantize the weight matrix (each row is a vector)
         weight = linear.weight.data.float()  # (out_features, in_features)
         encoded = tq_linear._quantizer.encode(weight)
 
-        tq_linear.pq_indices = encoded.pq_indices.to(device)
+        tq_linear.pq_indices = encoded.pq_indices.to(device=device, dtype=torch.int16)
         tq_linear.weight_norms = encoded.norms.to(device)
         tq_linear.qjl_sign_bits = encoded.qjl_sign_bits.to(device)
         tq_linear.residual_norms = encoded.residual_norms.to(device)
@@ -218,6 +229,7 @@ class TurboQuantLinear(nn.Module):
         Returns:
             Output tensor of shape (..., out_features).
         """
+        x_dtype = x.dtype
         # Reconstruct PolarQuant weights for the first term
         w_pq = self._quantizer.polar_quant.decode(
             self.pq_indices, self.weight_norms)  # (out_features, in_features)
@@ -247,7 +259,7 @@ class TurboQuantLinear(nn.Module):
         if self.bias is not None:
             result = result + self.bias
 
-        return result
+        return result.to(x_dtype)
 
     def extra_repr(self) -> str:
         return (f"in_features={self.in_features}, "
@@ -328,6 +340,12 @@ def quantize_model(
     quantized_params = 0
     replaced = 0
 
+    # Cache TurboQuant instances by (in_features, bits) to share rotation
+    # matrices across layers with the same dimensions. This dramatically
+    # reduces memory: e.g. 36 down_proj layers share one (d,d) rotation
+    # instead of each allocating their own.
+    quantizer_cache: dict = {}
+
     for name, module in model.named_modules():
         # Find all nn.Linear children of this module
         children_to_replace = {}
@@ -350,9 +368,14 @@ def quantize_model(
                             f"{child.in_features}x{child.out_features})")
                 continue
 
-            # Quantize
+            # Quantize, reusing shared quantizer for same dimensions
+            cache_key = (child.in_features, bits)
+            shared_quantizer = quantizer_cache.get(cache_key)
             tq_linear = TurboQuantLinear.from_linear(
-                child, bits=bits, compressed_forward=compressed_forward)
+                child, bits=bits, compressed_forward=compressed_forward,
+                shared_quantizer=shared_quantizer)
+            if cache_key not in quantizer_cache:
+                quantizer_cache[cache_key] = tq_linear._quantizer
             children_to_replace[child_name] = tq_linear
             quantized_params += n_params
             replaced += 1
